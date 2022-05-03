@@ -77,12 +77,12 @@
 
 
 
-<meta name="description" content="When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes bo">
+<meta name="description" content="When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Basic Representation of Crystalline Material and Some popular Networks">
 <meta property="og:url" content="http://example.com/2022/02/26/crystal-graph/index.html">
 <meta property="og:site_name" content="Research Blog">
-<meta property="og:description" content="When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes bo">
+<meta property="og:description" content="When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-02-25T18:56:53.000Z">
 <meta property="article:modified_time" content="2022-02-24T04:00:00.000Z">
@@ -330,7 +330,9 @@
       
 
       
-        <p>When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes both atomic information and bonding interactions between atoms. The encoding technique should be able to represent as more information of the materials as possible, while ensuring that the data is optimum for networks to converge. For CNN based methods, the main idea is to represent the crystal as a 2D vector, i.e. an image. It make usage of the saptial position of atoms on the periodic table and the quantity of atoms in a crystal. The representation isself does not contain any connection information of the crystal, during training the network learns part of the connection information automatically. However, this CNN based method only works well on datasets which contain only one type of material, for instance, ABX2 crystal. I guess this limitation results form it’s inability to determine various connections only from atomic formula.</p>
+        <span id="more"></span>
+
+<p>When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes both atomic information and bonding interactions between atoms. The encoding technique should be able to represent as more information of the materials as possible, while ensuring that the data is optimum for networks to converge. For CNN based methods, the main idea is to represent the crystal as a 2D vector, i.e. an image. It make usage of the saptial position of atoms on the periodic table and the quantity of atoms in a crystal. The representation isself does not contain any connection information of the crystal, during training the network learns part of the connection information automatically. However, this CNN based method only works well on datasets which contain only one type of material, for instance, ABX2 crystal. I guess this limitation results form it’s inability to determine various connections only from atomic formula.</p>
 <h2 id="CGCNN"><a href="#CGCNN" class="headerlink" title="CGCNN"></a>CGCNN</h2><p>CGCNN is the first approach using GCN to address material properity prediction problem.</p>
 <p>As illustrated in the paper, a crystal graph $\mathcal{G}$ is an undirected multigraph which is defined buy nodes representing atoms and edges representing connections between atoms in a crystal. The crystal graph is unlike normal graphs since it allows multiple edges between the same pair of end nodes, a characteristic for crystal graphs due their periodicity. Each node $i$ is represented by a feature vector $v_i$, encoding the property of the atom corresponding to node $i$, which is determined by the orbital electrons of the atom. Similarly, each edge $(i,j)<em>k$ is represented by a feature vector $u</em>{(i,j)_k}$ corresponding to the $k$th bond connecting atom $i$ and atom $j$, which is a kernelized distance features.</p>
 <p>The convolutional layers iteratively update the atom feature vector $v_i$ by convolution with surrounding atoms and bonds with a nonlinear convolution function.</p>
