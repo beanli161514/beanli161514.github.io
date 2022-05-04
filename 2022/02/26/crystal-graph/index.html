@@ -438,8 +438,8 @@ center atom. Then, this 1148 <span class="math inline">\(\times\)</span>
 <p><span class="math display">\[X_{c}=\sum_{n=0}^{M} \vec{O}_{c}^T
 \vec{O}_{n} \theta_{c n} \zeta\left(r_{c n}\right)\]</span></p>
 <p>This version of OFM doesn't contain <span
-class="math inline">\(X_{c}=\vec{O}_{c}^T\)</span>. Instead, I use <span
-class="math inline">\(\vec{O}_c^T \vec{O}_c\)</span>.</p>
+class="math inline">\(X_{c}=\vec{O}_{c}^T\)</span>. Instead, <span
+class="math inline">\(\vec{O}_c^T \vec{O}_c\)</span> is used.</p>
 <p>Then a CNN is used to extract features from OFM. After several
 convolution layers, the feature of OFM is a 1D vector, which is suitable
 for GCN or graph attention based methods.</p>
@@ -794,6 +794,28 @@ for GCN or graph attention based methods.</p>
   
 
   
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.bootcss.com/mathjax/2.7.1/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
 
   
 
