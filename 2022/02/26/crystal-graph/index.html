@@ -343,6 +343,7 @@
       
         <p>I admit that Dr. Xie still prevails in this field.</p>
 <span id="more"></span>
+<p>晶体图 G 是一个无向多重图，它由代表原子的节点和代表晶体中原子之间连接的边定义&gt;</p>
 <p>When predicting properties of crystal materials, the proper the main idea in existing methods based on convolutional graph neural nerwork is to present the structure by a crystal graph that encodes both atomic information and bonding interactions between atoms. The encoding technique should be able to represent as more information of the materials as possible, while ensuring that the data is optimum for networks to converge. For CNN based methods, the main idea is to represent the crystal as a 2D vector, i.e. an image. It make usage of the saptial position of atoms on the periodic table and the quantity of atoms in a crystal. The representation isself does not contain any connection information of the crystal, during training the network learns part of the connection information automatically. However, this CNN based method only works well on datasets which contain only one type of material, for instance, ABX2 crystal. I guess this limitation results form it’s inability to determine various connections only from atomic formula.</p>
 <h2 id="CGCNN"><a href="#CGCNN" class="headerlink" title="CGCNN"></a>CGCNN</h2><p>CGCNN is the first approach using GCN to address material properity prediction problem.</p>
 <p>As illustrated in the paper, a crystal graph $\mathcal{G}$ is an undirected multigraph which is defined buy nodes representing atoms and edges representing connections between atoms in a crystal. The crystal graph is unlike normal graphs since it allows multiple edges between the same pair of end nodes, a characteristic for crystal graphs due their periodicity. Each node $i$ is represented by a feature vector $v_i$, encoding the property of the atom corresponding to node $i$, which is determined by the orbital electrons of the atom. Similarly, each edge $(i,j)_k$ is represented by a feature vector $u_{(i,j)_k}$ corresponding to the $k$th bond connecting atom $i$ and atom $j$, which is a kernelized distance features.</p>
@@ -379,8 +380,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2022/02/26/representations/" rel="next" title="Representations and Coding Technique in Electrophysiology Method">
-                <i class="fa fa-chevron-left"></i> Representations and Coding Technique in Electrophysiology Method
+              <a href="/2022/02/26/paper-reading-1/" rel="next" title="Adjusted regularization in latent graphical models - Application to multiple-neuron spike count data">
+                <i class="fa fa-chevron-left"></i> Adjusted regularization in latent graphical models - Application to multiple-neuron spike count data
               </a>
             
           </div>
@@ -388,10 +389,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2022/02/26/paper-reading-1/" rel="prev" title="Adjusted regularization in latent graphical models - Application to multiple-neuron spike count data">
-                Adjusted regularization in latent graphical models - Application to multiple-neuron spike count data <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
