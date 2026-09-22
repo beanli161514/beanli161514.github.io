@@ -15,9 +15,9 @@ test('frame mapping respects exact boundaries, final frame, and floating point P
   assert.equal(frameAtTime(.29,100,500),29);assert.equal(frameAtTime(4.99,100,500),499);assert.equal(frameAtTime(5,100,500),499);
   for(let f=0;f<500;f++)assert.equal(frameAtTime(f/100,100,500),f);
 });
-test('all three tracks preserve expected frame and point counts; ears are complete',()=>{
+test('all three tracks preserve expected frame and point counts; face and ears are complete',()=>{
   assert.deepEqual(manifest.trials.map(t=>[t.start,t.end]),[[16300,16800],[46700,47000],[13400,13650]]);
-  for(const t of manifest.trials){const raw=gunzipSync(readFileSync(new URL('../public/data/'+t.track,import.meta.url)));assert.equal(raw.length,t.frames*169*3*4);const values=new Float32Array(raw.buffer,raw.byteOffset,raw.length/4);for(let f=0;f<t.frames;f++)for(let i=19*3;i<169*3;i++)assert.ok(Number.isFinite(values[f*169*3+i]));}
+  for(const t of manifest.trials){const raw=gunzipSync(readFileSync(new URL('../public/data/'+t.track,import.meta.url)));assert.equal(raw.length,t.frames*169*3*4);const values=new Float32Array(raw.buffer,raw.byteOffset,raw.length/4);for(let f=0;f<t.frames;f++)for(let i=0;i<169*3;i++)assert.ok(Number.isFinite(values[f*169*3+i]));}
 });
 test('PCA model retains both ears, 15 independent modes, and returns mean on reset',()=>{
   const {models}=JSON.parse(readFileSync(new URL('../public/data/shape-model.json',import.meta.url)));

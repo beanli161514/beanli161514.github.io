@@ -97,7 +97,7 @@ async function selectTrial(selected){
     const [data]=await Promise.all([getTrack(selected),videoReady]);
     if(version!==loadVersion)return;
     track=data;ready=true;draw(0);fitView();$('loading').hidden=true;$('play').disabled=false;$('timeline').disabled=false;
-    $('trial-caption').textContent=`${selected.label} · Source frames ${selected.start.toLocaleString()}–${(selected.end-1).toLocaleString()} · ${(selected.start/manifest.fps).toFixed(2)}–${(selected.end/manifest.fps).toFixed(2)} s in the recording. Missing landmarks are omitted.`;
+    $('trial-caption').textContent=`${selected.label} · Source frames ${selected.start.toLocaleString()}–${(selected.end-1).toLocaleString()} · ${(selected.start/manifest.fps).toFixed(2)}–${(selected.end/manifest.fps).toFixed(2)} s in the recording. Missing face landmarks are interpolated in 3D.`;
   }catch(e){if(version===loadVersion){$('loading').textContent='This trial could not load. Choose a trial to retry.';console.error(e);}}
 }
 for(const selected of manifest.trials){const b=document.createElement('button');b.innerHTML=`${selected.label}<small>${(selected.start/manifest.fps).toFixed(2)}–${(selected.end/manifest.fps).toFixed(2)} s</small>`;b.onclick=()=>selectTrial(selected);$('trials').append(b);}

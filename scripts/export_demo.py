@@ -3,6 +3,7 @@ import argparse, gzip, json, subprocess, sys
 from pathlib import Path
 import cv2
 import numpy as np
+from landmark_interpolation import interpolate_landmarks, interpolation_metadata, MAX_GAP_FRAMES
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--repo', type=Path, required=True)
@@ -26,13 +27,15 @@ size = infos[0].size
 calib = load_calib(root / 'calibration.toml', size)
 print('Loading face tracks...', flush=True)
 face = load_face_pose_csv(root / f'{root.name}.csv')
+face.xyz, face_filled = interpolate_landmarks(face.xyz)
 print('Loading ear tracks...', flush=True)
 curves = json.loads((root / 'ear_curves_global.json').read_text())
 ranges = [(16300, 16800), (46700, 47000), (13400, 13650)]
 manifest = dict(version=1, experiment=root.name, fps=fps, sourceSize=list(size),
                 tileSize=[480,384], grid=[3,2], encoding='gzip-float32-le',
                 pointCount=len(face.names)+150,
-                face=dict(names=face.names, edges=face.connections, colors=face.colors_rgb.tolist()),
+                face=dict(names=face.names, edges=face.connections, colors=face.colors_rgb.tolist(),
+                    interpolation=dict(method="linear-3d",maxGapFrames=MAX_GAP_FRAMES,context="full-recording",extrapolate=False)),
                 ears=[dict(name='left', offset=len(face.names), count=75, color='#ffad66'),
                       dict(name='right', offset=len(face.names)+75, count=75, color='#59dcb4')],
                 cameras=[], trials=[])
@@ -61,9 +64,10 @@ for index,(start,end) in enumerate(ranges,1):
             if points.shape == (75,3):
                 track[local,ear['offset']:ear['offset']+75] = points
     filename=f'trial-{index}'
-    (out/f'{filename}.f32.gz').write_bytes(gzip.compress(track.tobytes(),mtime=0))
+    (out/f'{filename}.filled.f32.gz').write_bytes(gzip.compress(track.tobytes(),mtime=0))
     manifest['trials'].append(dict(id=filename, label=f'Trial {index:02d}',start=start,end=end,
-        frames=count,video=f'{filename}.mp4',track=f'{filename}.f32.gz',poster=f'{filename}.jpg'))
+        frames=count,video=f'{filename}.mp4',track=f'{filename}.filled.f32.gz',poster=f'{filename}.jpg',
+        faceInterpolation=interpolation_metadata(face_filled,start,end)))
     # OpenCV reference projections for independent browser-math regression checks.
     for cam in manifest['cameras']:
         points=np.ascontiguousarray(track[0][np.isfinite(track[0]).all(axis=1)][::11])
