@@ -205,7 +205,13 @@ def main():
         'publishedGeometryVerification': 'Ordered node coordinates, edges with provenance, and segment geometry checked against the published database fingerprint. Review flags excluded.',
         'nodeCount': len(nodes), 'undirectedEdgeCount': len(all_edges),
         'originalEndpointCount': sum(len(neighbors) == 1 for neighbors in adjacency.values()),
-        'species': 'macaque', 'imaging': 'VISoR', 'coordinateUnit': 'voxel', 'spacingCalibrated': False,
+        'species': 'macaque', 'imaging': 'VISoR', 'coordinateUnit': 'voxel',
+        'voxelSizeUM': [1, 1, 1], 'spacingCalibrated': True,
+        'calibrationSource': {
+            'type': 'user-confirmed',
+            'note': 'The dataset owner confirmed 1 micrometer per voxel on each axis; consistent with NeuroFly paper section 5.1.',
+            'supportingReference': 'https://arxiv.org/html/2411.04715v1#S5.SS1',
+        },
     }
     specifications = [
         {'id': 'fragment-connection', 'taskType': 'fragment-connection', 'title': 'Fragment connection',
@@ -236,7 +242,8 @@ def main():
         },
         'sourceVolume': source_info,
         'axes': {'positions': 'xyz', 'volumeBytes': 'uint8, C-order zyx, x varies fastest',
-                 'spacing': [1, 1, 1], 'unit': 'voxel', 'note': 'Physical spacing is not supplied; voxel distances are not micrometers.'},
+                 'spacing': [1, 1, 1], 'unit': 'voxel', 'physicalSpacingUM': [1, 1, 1],
+                 'note': 'Graph positions remain in source voxel coordinates; physical spacing is confirmed as 1 micrometer per voxel on each axis.'},
         'taskDesign': {'taskTypes': ['fragment-connection', 'endpoint-selection', 'point-proposal'],
                        'source': 'Unchecked original segmentation endpoint (simulated pre-review state)',
                        'initialEdges': 'seger only', 'uncertaintyAvailableForAllTypes': True,

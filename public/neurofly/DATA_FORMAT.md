@@ -6,7 +6,7 @@ The page presents real 3D fluorescence crops and graph annotations through a **c
 
 **NeuroFly Neuron Reconstruction Dataset**, Zenodo, DOI [10.5281/zenodo.13328867](https://doi.org/10.5281/zenodo.13328867), August 15, 2024. The deposited creators are `Anonymous, Anonymous`; its public metadata specifies [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). These data are cropped, downsampled and quantized derivatives. Source software and annotation documentation: [NeuroFly](https://github.com/beanli161514/neurofly).
 
-The source is `RM009_axons_2.tif`: a **1000 × 1000 × 300 uint16** macaque VISoR image block, with 300 million voxels and 600,166,090 file bytes. It is a public sample block, not a whole brain or a terabyte dataset. The overview is this same complete block downsampled; larger-scale workflow statements describe the intended system context.
+The source is `RM009_axons_2.tif`: a **1000 × 1000 × 300 uint16** macaque VISoR image block, with 300 million voxels and 600,166,090 file bytes. At the dataset owner's confirmed **1 µm per voxel** spacing, its physical extent is **1 × 1 × 0.3 mm**. It is a public sample block, not a whole brain or a terabyte dataset. The overview is this same complete block downsampled; larger-scale workflow statements describe the intended system context.
 
 The source TIFF MD5 is `21e734a367969d84b93b7613d7a5f729`, matching the Zenodo file. The public annotation database MD5 is `df076171651054f04026a6e360fba765`. The bundled export is also compatible with a local annotation copy whose review flags differ, because all node coordinates, directed edges with provenance, and segment geometry match the public reference. The exporter verifies those fields against the independently recorded SHA256 fingerprint `7f194483dbb7ac8052e5b54542eac9c15c7b903dc7b447be970e0adcfabf385a`. It rejects other images or graphs rather than assigning these curated outcomes to arbitrary data.
 
@@ -27,7 +27,7 @@ The four volume files total **100,283 compressed bytes**; the three task crops a
 
 Source graph coordinates and source TIFF arrays both use xyz, as documented in NeuroFly's annotation guide, despite the TIFF's generic `QYX` tag. Exported binary arrays use **uint8, C-order zyx**, with x varying fastest. Construct a WebGL volume texture with dimensions `shape[0], shape[1], shape[2]`. Local point coordinates satisfy `localXYZ = sourceXYZ − originXYZ`. Each task has a true 32³ source crop, with `origin = floor(sourceEndpointXYZ) − 16` (clamped only at source-volume boundaries). All three selected endpoints therefore lie at local `[16, 16, 16]`, and every candidate lies inside the crop.
 
-The TIFF does not contain physical spacing calibration. `spacing: [1, 1, 1]` means voxel coordinates, not micrometers. Overview spacing is `[10, 10, 10]` source voxels. A source ROI therefore maps onto the overview by division by ten.
+The dataset owner confirmed **1 µm per voxel on all three axes**, consistent with [NeuroFly §5.1](https://arxiv.org/html/2411.04715v1#S5.SS1). The TIFF itself does not encode this calibration, so the manifest records it explicitly in `sourceVolume.voxelSizeUM: [1, 1, 1]`, `spacingCalibrated: true`, and `calibrationSource`. Each 32³ task is therefore a **32 × 32 × 32 µm** cube. Graph coordinates and `axes.spacing: [1, 1, 1]` remain in original voxel units; `axes.physicalSpacingUM` supplies the physical conversion. Overview spacing is `[10, 10, 10]` source voxels, equivalent to 10 µm per overview voxel. A source ROI maps onto the overview by division by ten.
 
 Display intensities use **8-bit display quantization**. Each crop maps its original uint16 30th and 99.95th intensity percentiles linearly to 0–255, clipping outside that range. The manifest retains the thresholds and original min/max. The overview first takes maxima over 10×10×10 source voxels, then maps its 30th and 99.7th percentiles to 0–255. These operations add no signal and perform no deconvolution.
 
@@ -66,7 +66,7 @@ For the selected point-proposal crop, B/C/D are local `[8,18,14]`, `[12,20,14]`,
 
 ## Visitor review records
 
-The page exports a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. This illustrates how standardized actions could feed review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
+The page stores a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. This illustrates how standardized actions could feed review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
 
 ## Reproduce
 
@@ -93,3 +93,20 @@ python scripts/export_neurofly.py --source /path/to/labeled_blocks --qa /path/to
 ```
 
 Source images are memory-mapped with `mode="r"`; SQLite databases are opened with `mode=ro`. Verification checks the complete encoded crop transforms, every exported graph coordinate, 32³ dimensions and endpoint centering, distinct fragment endpoint candidates, degree-one source topology, exhaustive nearby-endpoint searches, source-voxel intensities and local maxima, radial/cone/separation constraints, saved reference provenance, published fingerprints, and complete overview downsampling.
+
+## Whole-brain scale reference
+
+The anatomical context uses the **INIA19 rhesus macaque brain MRI template**, derived from 19 animals: Rohlfing T, Kroenke CD, Sullivan EV, Dubach MF, Bowden DM, Grant KA and Pfefferbaum A (2012), [*The INIA19 Template and NeuroMaps Atlas for Primate Brain Image Parcellation and Spatial Normalization*](https://doi.org/10.3389/fninf.2012.00027), *Frontiers in Neuroinformatics* 6:27. The authors distribute the template under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); the original files are available from [NITRC](https://www.nitrc.org/projects/inia19/). This demo modifies the brain-only MRI by cropping, resampling, intensity normalization, and 8-bit quantization.
+
+The source grid is **168 × 206 × 128 at 0.5 mm isotropic spacing**, with RAS axes and an anterior-commissure origin. Its NIfTI spatial-unit code is unset; millimeter units are established explicitly by [the publication, section 3.1](https://www.frontiersin.org/journals/neuroinformatics/articles/10.3389/fninf.2012.00027/full). The brain signal occupies a 61.5 × 77.5 × 57.5 mm bounding box. With margins, the web reference is **64 × 80 × 60 voxels at 1 mm spacing**, covering **64 × 80 × 60 mm**. The microscopy block is **1 × 1 × 0.3 mm**, and each review window is **32 × 32 × 32 µm**. The block's placement inside the MRI is **illustrative**: the MRI and microscopy are different datasets, and no anatomical registration is claimed.
+
+`data/brain-overview-v1.u8.gz` contains **118,950 compressed bytes** and expands to 307,200 uint8 bytes, in C-order zyx with x varying fastest. The exporter retains the complete nonzero brain bounds plus two source voxels of margin, applies a Gaussian anti-alias filter and linear resampling on the physical grid, then maps intensities from zero to the nonzero source's 99.8th percentile into 0–255. [brain-reference.json](data/brain-reference.json) records both affines, source and output spacing, crop/resampling transforms, source and asset SHA256 checksums, attribution, and the illustrative block center `[55.25, 48.25, 38.75]` in output voxel coordinates. This MRI asset is additional to the four microscopy volumes above.
+
+To reproduce it, download INIA19 1.0.1 from NITRC and extract `inia19-t1-brain.nii`. The script verifies its source checksum before processing:
+
+```sh
+python -m pip install nibabel numpy scipy pillow
+python scripts/export_brain_reference.py --source /path/to/inia19-t1-brain.nii --qa /path/to/qa
+```
+
+The default output is `public/neurofly/data`; `--qa` writes three orthogonal maximum-intensity projections with calibrated 10 mm scale bars.

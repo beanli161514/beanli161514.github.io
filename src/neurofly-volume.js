@@ -74,7 +74,7 @@ export class VolumeView {
     this.renderer.autoClear=false;
     this.renderer.setClearColor('#071019');
     this.renderer.localClippingEnabled=true;
-    this.renderer.domElement.setAttribute('aria-label','Rotate the microscopy volume with mouse or touch');
+    this.renderer.domElement.setAttribute('aria-label',`${container.getAttribute('aria-label')||'3D volume'}; drag to rotate, scroll to zoom`);
     container.append(this.renderer.domElement);
     this.camera=new THREE.OrthographicCamera(-64,64,64,-64,.1,2000);
     this.controls=new OrbitControls(this.camera,this.renderer.domElement);
@@ -233,6 +233,24 @@ export class VolumeView {
     this.graphScene.add(this.region);this.render();
   }
 
+  setScaleBar(lengthVoxels,label){
+    if(!this.scaleBar){
+      const element=document.createElement('div'),line=document.createElement('i'),caption=document.createElement('span');
+      element.className='volume-scale-bar';element.append(line,caption);this.container.append(element);
+      this.scaleBar={element,line,caption};
+    }
+    this.scaleBar.length=lengthVoxels;this.scaleBar.label=label;this.scaleBar.caption.textContent=label;this.render();
+  }
+
+  setLocator(position){
+    if(!this.locator){
+      const element=document.createElement('span');element.className='volume-locator';
+      element.setAttribute('aria-label','Image block locator; the small outlined box uses the physical scale');
+      this.container.append(element);this.locator={element};
+    }
+    this.locator.position=new THREE.Vector3(...position);this.render();
+  }
+
   resize() {
     const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;
     const volumeRatio=Math.min(1,1000/w)*(this.interacting?.75:1);
@@ -266,6 +284,19 @@ export class VolumeView {
     this.renderer.setRenderTarget(null);this.renderer.clear();
     this.renderer.render(this.screenScene,this.quadCamera);
     this.renderer.clearDepth();this.renderer.render(this.graphScene,this.camera);
+    if(this.scaleBar){
+      // An orthographic camera has the same physical scale at every depth.
+      const pixels=this.scaleBar.length*this.camera.zoom*this.container.clientWidth/(this.camera.right-this.camera.left);
+      const fraction=[1,.5,.2,.1].find(f=>pixels*f<=this.container.clientWidth*.3)||.1;
+      this.scaleBar.line.style.width=`${pixels*fraction}px`;
+      this.scaleBar.caption.textContent=this.scaleBar.label.replace(/^\d+(\.\d+)?/,n=>String(Number(n)*fraction));
+    }
+    if(this.locator){
+      const p=this.locator.position.clone().project(this.camera),element=this.locator.element;
+      element.hidden=Math.abs(p.x)>1||Math.abs(p.y)>1;
+      element.style.left=`${(p.x+1)*this.container.clientWidth/2}px`;
+      element.style.top=`${(1-p.y)*this.container.clientHeight/2}px`;
+    }
     const placed=[];
     this.labelEntries.forEach((entry,i)=>{
       const world=new THREE.Vector3(...entry.position),p=world.clone().project(this.camera),label=this.labels[i];
