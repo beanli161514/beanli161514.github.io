@@ -190,7 +190,7 @@ async function boot(){
   $('depth').oninput=e=>view.setDepth(Number(e.target.value));
   $('annotations-toggle').onchange=e=>view.setAnnotations(e.target.checked);
   window.addEventListener('keydown',event=>{
-    if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA','VIDEO'].includes(event.target.tagName))return;
+    if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName)||event.target.closest('#training'))return;
     const choice=choicesFor(tasks[index])[Number(event.key)-1];
     if(/^[1-9]$/.test(event.key)&&choice){event.preventDefault();review(choice.decision,choice.candidateId);}
   });

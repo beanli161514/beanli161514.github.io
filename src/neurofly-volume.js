@@ -215,6 +215,7 @@ export class VolumeView {
 
   setGraph(record) {
     this.record=record;
+    this.fiber=null;
     disposeGroup(this.annotations);this.lineMaterials=[];
     if(!this.task)return;
     const t=this.task,candidates=t.candidates||[];
@@ -259,6 +260,34 @@ export class VolumeView {
     this.makePoints([...a],terminal?'#50e7a1':'#29c4df',terminal ? .64 : .53);
     this.labels[0].textContent=terminal?'A · true ending':'A';
     this.labels[0].classList.toggle('terminal',terminal);
+    this.render();
+  }
+
+  /** Keep one GPU copy of a measured fiber; reveal only its ordered prefix. */
+  setFiberPath(pathXYZ) {
+    if(!Array.isArray(pathXYZ)||pathXYZ.length<2||pathXYZ.some(p=>p.length!==3||!p.every(Number.isFinite)))throw new Error('A fiber needs at least two finite XYZ positions.');
+    disposeGroup(this.annotations);this.lineMaterials=[];
+    this.labels.forEach(label=>label.remove());this.labels=[];this.labelEntries=[];
+    this.annotations.visible=true;
+    const positions=pathXYZ.map(p=>[...p]);
+    const points=this.makePoints(positions.flat(),'#38cddd',.64);
+    const lines=this.makeLine(positions.slice(1).flatMap((p,i)=>[...positions[i],...p]),'#38cddd',2);
+    const tip=this.makePoints([0,0,0],'#ffcd62',.9);
+    this.fiber={positions,points,lines,tip};
+    this.setFiberProgress(1);
+  }
+
+  setFiberProgress(count) {
+    if(!this.fiber)return;
+    const {positions,points,lines,tip}=this.fiber;
+    const visible=Math.max(0,Math.min(positions.length,Math.floor(Number(count)||0)));
+    points.count=visible;
+    lines.geometry.instanceCount=Math.max(0,visible-1);
+    tip.count=visible?1:0;
+    if(visible){
+      tip.setMatrixAt(0,new THREE.Matrix4().makeTranslation(...positions[visible-1]));
+      tip.instanceMatrix.needsUpdate=true;
+    }
     this.render();
   }
 
