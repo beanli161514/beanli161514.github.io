@@ -1,13 +1,21 @@
-# Ear, in motion
+# Rubin Zhao · Research demos
 
-Interactive GitHub Pages demo for Rubin Zhao's multiview mouse-ear reconstruction project.
+Two independent interactive research pages share a neutral project index and a consistent academic layout.
 
-The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: WebGL 2 volume MIP views, annotated neurons in a T154 whole mouse brain, and three task types for local graph review. The root remains the ear project.
+| Page | Published URL | Source entry |
+| --- | --- | --- |
+| Research projects | [beanli161514.github.io](https://beanli161514.github.io/) | [index.html](index.html) |
+| 3D Ear Reconstruction | [/ear/](https://beanli161514.github.io/ear/) | [ear/index.html](ear/index.html) |
+| Scalable Annotation for Connectome Construction · NeuroFly | [/neurofly/](https://beanli161514.github.io/neurofly/) | [neurofly/index.html](neurofly/index.html) |
+
+The ear page provides:
 
 - Three selected B41 trials, six synchronized camera views, distortion-aware ear and face overlays.
 - Interactive 3D ear rims and facial landmarks, with calibrated camera frustums.
 - Shared frame slider, play/pause, and playback speed.
 - Left/right statistical shape model with 15 PCA sliders in standard deviations.
+
+The NeuroFly page provides WebGL 2 volume MIP views, annotated neurons in a T154 whole mouse brain, three task types for local graph review, and a structured-action tracing walkthrough.
 
 ## Develop
 
@@ -18,13 +26,15 @@ npm test
 npm run build
 ```
 
-The output in `dist/` is a complete static site. Fonts, renderer, data, and media are hosted together; no runtime CDN or server is required. A recent browser with WebGL2 is recommended. A slower display can skip presented frames; all views use one video clock.
+Open the development server's `/` project index, `/ear/`, or `/neurofly/`. Vite builds all three HTML entries into the matching paths in `dist/`.
+
+The output in `dist/` is a complete static site. Fonts, renderer, data, and media are hosted together; no runtime CDN or server is required. A recent browser with WebGL2 is recommended. In the ear demo, a slower display can skip presented frames; all views use one video clock.
 
 ## Data
 
-See [the versioned data contract](public/DATA_FORMAT.md). Source ranges are zero-based, end-exclusive, and retain all 100 fps source frames. These assets are specific selected recording excerpts, not the complete dataset. The reconstruction code lives in [ear_recon](https://github.com/beanli161514/ear_recon).
+The ear assets remain in `public/data/`, served at `/data/`; their [versioned data contract](public/DATA_FORMAT.md) is served at `/DATA_FORMAT.md`. Source ranges are zero-based, end-exclusive, and retain all 100 fps source frames. These assets are specific selected recording excerpts, not the complete dataset. The reconstruction code lives in [ear_recon](https://github.com/beanli161514/ear_recon).
 
-NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document two separate acquisitions: the T154 mouse whole-brain fluorescence image with six annotated neurons, and the public RM009 macaque microscopy block used for local tasks. The whole-brain box shows the RM009 block's **1 × 1 × 0.3 mm** physical size at an illustrative position; the datasets are not registered to one another.
+NeuroFly's assets remain in `public/neurofly/data/`, served at `/neurofly/data/`. Its [data contract and provenance](public/neurofly/DATA_FORMAT.md), served at `/neurofly/DATA_FORMAT.md`, document two separate acquisitions: the T154 mouse whole-brain fluorescence image with six annotated neurons, and the public RM009 macaque microscopy block used for local tasks. The whole-brain box shows the RM009 block's **1 × 1 × 0.3 mm** physical size at an illustrative position; the datasets are not registered to one another.
 
 The three local tasks use **32³ endpoint-centered crops** and cover a connection decision between two fragments, selection among nearby fragment endpoints, and point proposals when no other fragment endpoints are nearby. Point proposals use the endpoint direction and local intensity maxima within a declared distance range. Choosing **None** in that task labels the source as a **true ending**; choosing **Uncertain** defers it without assigning a training target.
 
@@ -36,4 +46,4 @@ Rebuild the T154 assets with [`export_t154_brain.py`](scripts/export_t154_brain.
 
 ## Publish
 
-`npm run build` produces the site. The `gh-pages` branch contains only the built site and `.nojekyll`; GitHub Pages publishes that branch's root. The `main` branch contains this source, exporter, tests, and assets. Update the build and push `gh-pages` when changing the published demo.
+`npm run build` produces the project index and both project pages. Publish the complete `dist/` tree so `/ear/`, `/neurofly/`, and both asset directories stay available. The `gh-pages` branch contains only the built site and `.nojekyll`; GitHub Pages publishes that branch's root. The `main` branch contains this source, exporters, tests, and assets. Update the build and push `gh-pages` when changing the published site.

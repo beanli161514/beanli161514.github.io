@@ -40,7 +40,7 @@ For point `p` in local frame `i`, XYZ starts at byte `4 * 3 * (169*i + p)`. Miss
 Example decode:
 
 ```js
-const response = await fetch('data/trial-1.filled.f32.gz');
+const response = await fetch('/data/trial-1.filled.f32.gz');
 const bytes = new Uint8Array(await response.arrayBuffer());
 // Some hosts send Content-Encoding: gzip, causing automatic HTTP decompression.
 const raw = bytes[0] === 31 && bytes[1] === 139 ? gunzipSync(bytes) : bytes;
