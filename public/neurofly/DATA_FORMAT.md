@@ -1,18 +1,18 @@
 # NeuroFly interactive demo data
 
-The page presents real 3D fluorescence crops and graph annotations through a **curated decision replay**. It demonstrates the structured graph-review workflow. It does not run model inference, change the source dataset, or train a model in the browser. Visitor choices are **unverified demo reviews**, never automatically validated training ground truth.
+The page combines T154 mouse whole-brain fluorescence and annotated neurons with RM009 macaque image-block context and local graph-review tasks. The local tasks present real 3D fluorescence crops and graph annotations through a **curated decision replay**. It demonstrates the structured graph-review workflow. It does not run model inference, change the source dataset, or train a model in the browser. Visitor choices are **unverified demo reviews**, never automatically validated training ground truth.
 
-## Source and attribution
+## RM009 source and attribution
 
 **NeuroFly Neuron Reconstruction Dataset**, Zenodo, DOI [10.5281/zenodo.13328867](https://doi.org/10.5281/zenodo.13328867), August 15, 2024. The deposited creators are `Anonymous, Anonymous`; its public metadata specifies [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). These data are cropped, downsampled and quantized derivatives. Source software and annotation documentation: [NeuroFly](https://github.com/beanli161514/neurofly).
 
-The source is `RM009_axons_2.tif`: a **1000 × 1000 × 300 uint16** macaque VISoR image block, with 300 million voxels and 600,166,090 file bytes. At the dataset owner's confirmed **1 µm per voxel** spacing, its physical extent is **1 × 1 × 0.3 mm**. It is a public sample block, not a whole brain or a terabyte dataset. The overview is this same complete block downsampled; larger-scale workflow statements describe the intended system context.
+The source is `RM009_axons_2.tif`: a **1000 × 1000 × 300 uint16** macaque VISoR image block, with 300 million voxels and 600,166,090 file bytes. At the dataset owner's confirmed **1 µm per voxel** spacing, its physical extent is **1 × 1 × 0.3 mm**. It is a public sample block, not a whole brain or a terabyte dataset. The block overview is this same complete image downsampled. The T154 whole-brain context described below is a separate acquisition.
 
 The source TIFF MD5 is `21e734a367969d84b93b7613d7a5f729`, matching the Zenodo file. The public annotation database MD5 is `df076171651054f04026a6e360fba765`. The bundled export is also compatible with a local annotation copy whose review flags differ, because all node coordinates, directed edges with provenance, and segment geometry match the public reference. The exporter verifies those fields against the independently recorded SHA256 fingerprint `7f194483dbb7ac8052e5b54542eac9c15c7b903dc7b447be970e0adcfabf385a`. It rejects other images or graphs rather than assigning these curated outcomes to arbitrary data.
 
 The dataset is the source of image values and graph geometry. The standalone export code does not copy NeuroFly GPL-3.0 implementation modules into the browser renderer.
 
-## Runtime files
+## RM009 runtime files
 
 | File | Dimensions xyz | Compressed bytes | Purpose |
 | --- | --- | ---: | --- |
@@ -21,7 +21,7 @@ The dataset is the source of image values and graph geometry. The standalone exp
 | `data/point-proposal-32-v3.u8.gz` | 32 × 32 × 32 | 12,139 | Point proposal, source 4578 |
 | `data/overview.u8.gz` | 100 × 100 × 30 | 66,734 | Complete source block, max pooled 10× per axis |
 
-The four volume files total **100,283 compressed bytes**; the three task crops account for 33,549 bytes. A task crop expands to 32,768 uint8 bytes. `data/manifest.json` supplies source provenance, transforms, task prompts, graph geometry, and reference notes. Cases can be fetched independently and cached for later visits.
+The four RM009 volume files total **100,283 compressed bytes**; the three task crops account for 33,549 bytes. A task crop expands to 32,768 uint8 bytes. `data/manifest.json` supplies source provenance, transforms, task prompts, graph geometry, and reference notes. Cases can be fetched independently and cached for later visits.
 
 ## Coordinates and rendering
 
@@ -66,7 +66,7 @@ For the selected point-proposal crop, B/C/D are local `[8,18,14]`, `[12,20,14]`,
 
 ## Visitor review records
 
-The page stores a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. This illustrates how standardized actions could feed review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
+The page stores a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. The records remain in browser storage; **Reset session** clears them. The page does not expose a record-export button. This illustrates how standardized actions can support review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
 
 ## Reproduce
 
@@ -94,19 +94,79 @@ python scripts/export_neurofly.py --source /path/to/labeled_blocks --qa /path/to
 
 Source images are memory-mapped with `mode="r"`; SQLite databases are opened with `mode=ro`. Verification checks the complete encoded crop transforms, every exported graph coordinate, 32³ dimensions and endpoint centering, distinct fragment endpoint candidates, degree-one source topology, exhaustive nearby-endpoint searches, source-voxel intensities and local maxima, radial/cone/separation constraints, saved reference provenance, published fingerprints, and complete overview downsampling.
 
-## Whole-brain scale reference
+## T154 whole-brain microscopy and neurons
 
-The anatomical context uses the **INIA19 rhesus macaque brain MRI template**, derived from 19 animals: Rohlfing T, Kroenke CD, Sullivan EV, Dubach MF, Bowden DM, Grant KA and Pfefferbaum A (2012), [*The INIA19 Template and NeuroMaps Atlas for Primate Brain Image Parcellation and Spatial Normalization*](https://doi.org/10.3389/fninf.2012.00027), *Frontiers in Neuroinformatics* 6:27. The authors distribute the template under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/); the original files are available from [NITRC](https://www.nitrc.org/projects/inia19/). This demo modifies the brain-only MRI by cropping, resampling, intensity normalization, and 8-bit quantization.
+The whole-brain context is fluorescence microscopy from the user-provided **`T154_1um.ims`** and its corresponding **`T154_1um.db`** annotation database. It is a mouse acquisition, separate from the RM009 macaque block and local tasks. The yellow box shows a **1 × 1 × 0.3 mm** block at its physical scale in the T154 image; its position is illustrative, with no cross-acquisition registration claimed.
 
-The source grid is **168 × 206 × 128 at 0.5 mm isotropic spacing**, with RAS axes and an anterior-commissure origin. Its NIfTI spatial-unit code is unset; millimeter units are established explicitly by [the publication, section 3.1](https://www.frontiersin.org/journals/neuroinformatics/articles/10.3389/fninf.2012.00027/full). The brain signal occupies a 61.5 × 77.5 × 57.5 mm bounding box. With margins, the web reference is **64 × 80 × 60 voxels at 1 mm spacing**, covering **64 × 80 × 60 mm**. The microscopy block is **1 × 1 × 0.3 mm**, and each review window is **32 × 32 × 32 µm**. The block's placement inside the MRI is **illustrative**: the MRI and microscopy are different datasets, and no anatomical registration is claimed.
+T154 source provenance is recorded separately from the public RM009 dataset. The RM009 Zenodo **CC BY 4.0** license is not asserted for the user-provided T154 image or annotation database. Metadata records the source filenames, the T154 database SHA256, the checksum of the valid low-resolution image data read from the IMS pyramid, and checksums of the generated assets. The full 279.9 GB IMS file is not hashed or read in full.
 
-`data/brain-overview-v1.u8.gz` contains **118,950 compressed bytes** and expands to 307,200 uint8 bytes, in C-order zyx with x varying fastest. The exporter retains the complete nonzero brain bounds plus two source voxels of margin, applies a Gaussian anti-alias filter and linear resampling on the physical grid, then maps intensities from zero to the nonzero source's 99.8th percentile into 0–255. [brain-reference.json](data/brain-reference.json) records both affines, source and output spacing, crop/resampling transforms, source and asset SHA256 checksums, attribution, and the illustrative block center `[55.25, 48.25, 38.75]` in output voxel coordinates. This MRI asset is additional to the four microscopy volumes above.
+The displayed neurons are six genuine soma-bearing components from the T154 database. They are described as **annotated neurons**, not as complete or independently validated reconstructions. The browser can show all six or isolate an individual neuron; image contrast and neuron visibility are separate controls.
 
-To reproduce it, download INIA19 1.0.1 from NITRC and extract `inia19-t1-brain.nii`. The script verifies its source checksum before processing:
 
-```sh
-python -m pip install nibabel numpy scipy pillow
-python scripts/export_brain_reference.py --source /path/to/inia19-t1-brain.nii --qa /path/to/qa
+### Image dimensions and browser assets
+
+The IMS metadata calibrates the native grid to **12,000 × 8,000 × 13,200 voxels at 1 µm spacing**, covering **12 × 8 × 13.2 mm** with origin `[0, 0, 0]` µm. This is 1,267,200,000,000 native voxels, or **2,534,400,000,000 bytes (2.5344 TB)** as uncompressed uint16. The actual `T154_1um.ims` file is **279,897,933,302 bytes**. These are source-data dimensions; the browser does not load that native volume.
+
+| Browser file | Contents | Compressed bytes | Decoded bytes |
+| --- | --- | ---: | ---: |
+| `data/t154-brain.json` | Image calibration, source pyramid metadata, transforms, checksums and block placement | — | JSON metadata |
+| `data/t154-brain-v1.u8.gz` | 188 × 125 × 207 uint8 fluorescence overview | 2,092,344 | 4,864,500 |
+| `data/t154-neurons-v1.json.gz` | Six annotated neuron skeletons with source provenance | 120,492 | 318,558 |
+| `data/t154-neurons.json` | Readable skeleton metadata, per-neuron statistics and asset checksum | — | JSON metadata |
+
+The brain volume is **uint8, C-order zyx, with x varying fastest**. Its isotropic spacing is **64 µm**, with an enclosing output extent of **12.032 × 8 × 13.248 mm**. The extra 32 µm in x and 48 µm in z are output-grid padding, not additional specimen extent.
+
+The image exporter reads only the valid **187 × 125 × 206** voxels from `DataSet/ResolutionLevel 6/TimePoint 0/Channel 0/Data`: **9,630,500 bytes** of uint16. This channel is named `488`. The stored HDF5 array has padding; the export uses the level's `ImageSizeXYZ` attributes to exclude it. The level's calibrated spacing is approximately `[64.1711, 64, 64.0777]` µm, so linear interpolation resamples it onto the isotropic 64 µm output grid. Samples outside the valid grid are zero. Display quantization maps intensities from zero to the resampled image's 99.8th percentile (355.413818359375) into 0–255, clipping above that threshold. No fluorescence or neuron geometry is synthesized.
+
+### Image and neuron coordinates
+
+Native graph coordinates are voxel-center indices in xyz. The image, neuron positions, and block outline share the calibrated physical space:
+
+```text
+physicalXYZ_um = (nativeXYZ + 0.5) × 1
+brainOverviewXYZ = (nativeXYZ + 0.5) / 64 − 0.5
+physicalXYZ_um = (brainOverviewXYZ + 0.5) × 64
 ```
 
-The default output is `public/neurofly/data`; `--qa` writes three orthogonal maximum-intensity projections with calibrated 10 mm scale bars.
+There is no axis permutation or reflection. The metadata records `affineSourceVoxelToOverview`, the source-pyramid resampling affine, native/output physical bounds, and the corresponding skeleton transform.
+
+The yellow block is **15.625 × 15.625 × 4.6875 overview voxels**, exactly **1 × 1 × 0.3 mm** at 64 µm spacing. Its center is native `[8046, 1843, 4668]`, the soma of the largest displayed T154 component, equivalent to physical `[8.0465, 1.8435, 4.6685]` mm. The exporter verifies that an expanded box around this placement lies within the fluorescence image's tissue signal. This supplies an illustrative location inside T154; it does not establish any anatomical correspondence to RM009.
+
+### Annotated neuron selection and simplification
+
+The source database contains **217,524 visible nodes**, 178,887 unique undirected edges after normalizing reciprocal rows and removing three self-loops, and six explicitly marked somata. The export selects the six connected components with exactly one `type=1` soma and `tester`-created nodes, ordered by source node count. `tester` is the annotation GUI's default username, not a named or independently verified reviewer.
+
+| Display label | Soma node ID | Source nodes | Display nodes | Checked terminals |
+| --- | ---: | ---: | ---: | ---: |
+| Neuron 1 | 211485 | 7,659 | 693 | 86 |
+| Neuron 2 | 214856 | 4,960 | 443 | 37 |
+| Neuron 3 | 214866 | 4,560 | 399 | 20 |
+| Neuron 4 | 155119 | 3,401 | 325 | 21 |
+| Neuron 5 | 216068 | 2,967 | 303 | 27 |
+| Neuron 6 | 217410 | 1,941 | 161 | 11 |
+| **Total** | | **25,488** | **2,324** | **202** |
+
+All 202 terminal nodes have `checked=1`; many automatically extracted interior nodes have `checked=0`. This is evidence of endpoint review, not certification that each entire neuron is complete or error-free. The runtime metadata explicitly records `completeness: "not-asserted"`.
+
+Display simplification uses **Ramer–Douglas–Peucker with a 4 µm tolerance on degree-two chains only**. Every soma, branch node, terminal node, and branch connection is retained, along with the exact native coordinates of every retained point. The displayed graph has 2,324 nodes and 2,318 edges; no new connection is inferred. Each neuron's `positionsXYZ` aligns with `sourceNodeIds`; `edgeSourceNodeIds` retains the original node-ID path represented by each display edge. `nodeTypes`, `nodeChecked`, `nodeCreators`, source/display statistics, and annotation evidence remain available in the compressed JSON.
+
+The database SHA256 is `82bb10bc76be19f6cdb01251dca65d5c2dad3635861ef8b5acb291f85e0e6509`. Image and skeleton asset checksums are recorded in [t154-brain.json](data/t154-brain.json) and [t154-neurons.json](data/t154-neurons.json).
+
+### Reproduce T154 assets
+
+Use the matching `T154_1um.ims` and `T154_1um.db` sources. Both exporters open their source data read-only; the brain exporter reads the existing low-resolution pyramid without reading native-resolution image data.
+
+```sh
+python -m pip install h5py numpy scipy
+python scripts/export_t154_brain.py --source /path/to/T154/T154_1um.ims
+python scripts/export_t154_neurons.py --source /path/to/T154/T154_1um.db
+```
+
+Both default to `public/neurofly/data` and accept `--out /path/to/demo-data`. The skeleton exporter accepts `--tolerance-um 4` and `--overview-spacing-um 64`; the latter must match the brain overview's spacing. Optional brain QA projections require Pillow:
+
+```sh
+python -m pip install pillow
+python scripts/export_t154_brain.py --source /path/to/T154/T154_1um.ims --qa /path/to/qa
+```
+
+The brain metadata records measured source extents, source-level/asset checksums, decoded byte counts, coordinate transforms, and the physical block placement. The skeleton metadata records source database counts and checksum, selected components, source-ID paths, retained topology, and measured simplification error.

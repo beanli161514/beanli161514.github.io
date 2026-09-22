@@ -12,26 +12,6 @@ const almost = (a, b, tolerance = 1e-8) => assert.ok(Math.abs(a - b) < tolerance
 const volumeBytes = spec => gunzipSync(readFileSync(new URL(spec.volume, root)));
 const voxelIndex = ([x, y, z]) => x + 32 * (y + 32 * z);
 
-test('whole-brain reference retains calibrated physical scale and fits the illustrative block', () => {
-  const brain = JSON.parse(readFileSync(new URL('brain-reference.json', root)));
-  const compressed = readFileSync(new URL(brain.volume, root));
-  const voxels = gunzipSync(compressed);
-  assert.equal(compressed.length, brain.compressedBytes);
-  assert.equal(voxels.length, brain.shape.reduce((a, b) => a * b, 1));
-  assert.deepEqual(brain.spacingMM, [1, 1, 1]);
-  assert.deepEqual(brain.shape.map((n, i) => n * brain.spacingMM[i]), brain.physicalExtentMM);
-  assert.equal(brain.registration.registeredToMicroscopy, false);
-  const blockSize = manifest.sourceVolume.shapeXYZ.map((n, i) => n * manifest.sourceVolume.voxelSizeUM[i] / 1000);
-  assert.deepEqual(blockSize, brain.illustrativeBlockSizeMM);
-  brain.illustrativeBlockCenterXYZ.forEach((n, i) => {
-    const half = blockSize[i] / brain.spacingMM[i] / 2;
-    assert.ok(n - half >= -.5 && n + half <= brain.shape[i] - .5);
-    const affine = brain.affineVoxelToRASMM[i];
-    almost(affine[0] * brain.illustrativeBlockCenterXYZ[0] + affine[1] * brain.illustrativeBlockCenterXYZ[1] + affine[2] * brain.illustrativeBlockCenterXYZ[2] + affine[3], brain.illustrativeBlockCenterRASMM[i]);
-  });
-  const [x, y, z] = brain.illustrativeBlockCenterXYZ.map(Math.round);
-  assert.ok(voxels[x + brain.shape[0] * (y + brain.shape[1] * z)] > 0, 'illustrative location lies inside brain signal');
-});
 
 function reachable(edges, start) {
   const found = new Set([start]);

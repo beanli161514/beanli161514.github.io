@@ -1,6 +1,7 @@
 import {gunzipSync} from 'fflate';
 import {VolumeView,CANDIDATE_COLORS} from './neurofly-volume.js';
 import {makeReview,summarizeReviews,graphEdgesAfterReview} from './neurofly-review.js';
+import {transformXYZ,physicalBox} from './neurofly-scale.js';
 
 const $=id=>document.getElementById(id);
 const dataRoot=new URL('./data/',window.location.href);
@@ -203,16 +204,42 @@ async function boot(){
     setRegion(tasks[index]);
   }
   async function initBrain(){
-    const spec=await(await responseFor('brain-reference.json')).json(),voxels=await loadVolume(spec);
+    const spec=await(await responseFor('t154-brain.json')).json(),voxels=await loadVolume(spec);
     const brain=new VolumeView($('brain-overview'));
     const center=spec.shape.map(n=>(n-1)/2);
     brain.setData({...spec,nodes:[{id:'a',position:center}],edges:[],sourceId:'a',sourcePosition:center,candidates:[]},voxels);
-    brain.setAnnotations(false);brain.setView('oblique');
-    const size=manifest.sourceVolume.shapeXYZ.map((n,i)=>n*manifest.sourceVolume.voxelSizeUM[i]/1000/spec.spacingMM[i]);
-    const origin=spec.illustrativeBlockCenterXYZ.map((n,i)=>n-size[i]/2+.5);
-    brain.setRegion(origin,size);brain.setLocator(spec.illustrativeBlockCenterXYZ);
-    brain.setScaleBar(20/spec.spacingMM[0],'20 mm');
-    $('brain-caption').textContent='Rhesus macaque MRI reference. The locator marks a 1 × 1 × 0.3 mm image block at its true relative size.';
+    brain.setAnnotations(false);brain.setView(spec.preferredView||'oblique');
+    const sizeMM=manifest.sourceVolume.shapeXYZ.map((n,i)=>n*manifest.sourceVolume.voxelSizeUM[i]/1000);
+    const box=physicalBox(spec.illustrativeBlockCenterXYZ,sizeMM,spec.spacingMM);
+    brain.setRegion(box.origin,box.size);brain.setScaleBar(2/spec.spacingMM[0],'2 mm');
+    brain.setContrast(Number($('brain-contrast').value));
+    $('brain-contrast').disabled=false;
+    $('brain-contrast').oninput=e=>brain.setContrast(Number(e.target.value));
+    $('brain-view-reset').disabled=false;
+    $('brain-view-reset').onclick=()=>brain.setView(spec.preferredView||'oblique');
+    try{
+      const bytes=new Uint8Array(await(await responseFor('t154-neurons-v1.json.gz')).arrayBuffer());
+      // Static servers may set Content-Encoding:gzip for .json.gz, in which
+      // case fetch has already decoded it. Support both hosting behaviors.
+      const data=JSON.parse(new TextDecoder().decode(bytes[0]===31&&bytes[1]===139?gunzipSync(bytes):bytes));
+      const traces=data.neurons.map(neuron=>{
+        const positions=neuron.positionsXYZ.map(p=>transformXYZ(p,spec.affineSourceVoxelToOverview));
+        return {...neuron,segments:neuron.edges.flatMap(([a,b])=>[...positions[a],...positions[b]])};
+      });
+      brain.setTraces(traces);
+      const selector=$('brain-neuron-select'),key=$('brain-neuron-key');
+      for(const trace of traces){
+        const option=document.createElement('option');option.value=trace.id;option.textContent=trace.label;selector.append(option);
+        const item=document.createElement('span'),dot=document.createElement('i');
+        dot.style.background=trace.color;item.append(dot,document.createTextNode(trace.label));item.dataset.neuron=trace.id;key.append(item);
+      }
+      const updateTraces=()=>{
+        brain.showTraces($('brain-neurons-toggle').checked,selector.value);
+        for(const item of key.children)item.classList.toggle('muted',!$('brain-neurons-toggle').checked||(selector.value!=='all'&&item.dataset.neuron!==selector.value));
+      };
+      selector.disabled=false;$('brain-neurons-toggle').disabled=false;
+      selector.onchange=updateTraces;$('brain-neurons-toggle').onchange=updateTraces;updateTraces();
+    }catch(error){$('brain-neuron-key').textContent='Neuron annotations could not load.';console.error(error);}
   }
   initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});
   initBrain().catch(error=>{$('brain-overview').textContent='Brain reference unavailable.';console.error(error);});

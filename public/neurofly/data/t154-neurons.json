@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "kind": "annotated-neuron-components",
+  "dataset": "T154",
+  "source": {
+    "databaseFilename": "T154_1um.db",
+    "databaseSHA256": "82bb10bc76be19f6cdb01251dca65d5c2dad3635861ef8b5acb291f85e0e6509",
+    "databaseBytes": 55705600,
+    "imageFilename": "T154_1um.ims",
+    "shapeXYZ": [
+      12000,
+      8000,
+      13200
+    ],
+    "voxelSpacingUM": [
+      1,
+      1,
+      1
+    ],
+    "physicalExtentMM": [
+      12,
+      8,
+      13.2
+    ],
+    "coordinateAxes": [
+      "x",
+      "y",
+      "z"
+    ],
+    "coordinateUnit": "native-image-voxel",
+    "coordinateConvention": "Native image voxel-center index. Physical XYZ micrometers = (index + 0.5) \u00d7 1, relative to IMS ExtMin=[0,0,0].",
+    "coordinateEvidence": "NeuroFly nodes.coord is XYZ; matching T154_1um.ims ImageSize XYZ=12000,8000,13200 and ExtMax XYZ=12000,8000,13200 micrometers."
+  },
+  "overviewTransform": {
+    "spacingUM": [
+      64,
+      64,
+      64
+    ],
+    "nativeXYZToOverviewXYZScale": [
+      0.015625,
+      0.015625,
+      0.015625
+    ],
+    "nativeXYZToOverviewXYZOffset": [
+      -0.4921875,
+      -0.4921875,
+      -0.4921875
+    ],
+    "formula": "(nativeXYZ + 0.5) / overviewSpacingUM - 0.5",
+    "axisPermutation": [
+      0,
+      1,
+      2
+    ],
+    "axisFlips": [
+      false,
+      false,
+      false
+    ]
+  },
+  "provenance": {
+    "selection": "All six visible connected components with exactly one type=1 soma and tester-created nodes; sorted by descending source node count.",
+    "creatorSemantics": {
+      "seger": "Automatic segment extraction",
+      "tester": "Default user account in the NeuroFly annotation GUI; not a named or independently verified reviewer."
+    },
+    "checkedSemantics": {
+      "0": "Unchecked",
+      "1": "Checked",
+      "-1": "Explicit review queue"
+    },
+    "proofreading": "Every terminal of these six components is checked=1. Many automatically extracted interior nodes remain checked=0. This is endpoint-review evidence, not certification that the full neuron is complete or error-free.",
+    "graphNormalization": "Visible nodes only. Reciprocal edge rows deduplicated as undirected edges. Self loops omitted and reported in databaseStatistics. No new graph connections are inferred.",
+    "simplification": {
+      "method": "Ramer-Douglas-Peucker along degree-2 chains only",
+      "toleranceUM": 4,
+      "preserves": [
+        "soma IDs",
+        "branch IDs and degrees",
+        "terminal IDs",
+        "full branch topology",
+        "exact retained source coordinates",
+        "source node-ID path for every displayed edge"
+      ]
+    },
+    "implementationEvidence": [
+      "neurofly/dbio.py: segs2db schema",
+      "neurofly/segs_annotator.py: user_name, label_soma, export_swc",
+      "neurofly/agent_annotator.py: checked terminal selection"
+    ],
+    "recordedTimestampsTimezone": "Not specified by source database"
+  },
+  "databaseStatistics": {
+    "nodeCount": 217524,
+    "visibleNodeCount": 217524,
+    "directedEdgeRowCount": 357777,
+    "uniqueUndirectedEdgeCount": 178887,
+    "componentCount": 38637,
+    "sourceSegmentCount": 39475,
+    "somaCount": 6,
+    "nodeCreatorCounts": {
+      "seger": 211428,
+      "tester": 6096
+    },
+    "nodeCheckedCounts": {
+      "0": 210557,
+      "1": 6967
+    },
+    "ignoredSelfLoopNodeIds": [
+      178102,
+      211483,
+      216068
+    ],
+    "excludedHiddenOrMissingEdges": []
+  },
+  "neuronCount": 6,
+  "skeleton": "t154-neurons-v1.json.gz",
+  "compressedBytes": 120492,
+  "decodedBytes": 318558,
+  "skeletonSHA256": "5c30a3c0e59ed165c778510ca44fff2c0db624b2698d80f83e55d01d906e7e98",
+  "neurons": [
+    {
+      "id": "t154-soma-211485",
+      "label": "Neuron 1",
+      "color": "#53d9e8",
+      "sourceComponentId": 133252,
+      "somaNodeIds": [
+        211485
+      ],
+      "somaPositionsXYZ": [
+        [
+          8046,
+          1843,
+          4668
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 7659,
+        "edgeCount": 7658,
+        "branchCount": 76,
+        "terminalCount": 86,
+        "terminalCheckedCounts": {
+          "1": 86
+        },
+        "nodeCheckedCounts": {
+          "0": 4532,
+          "1": 3127
+        },
+        "nodeCreatorCounts": {
+          "seger": 4823,
+          "tester": 2836
+        },
+        "edgeCreatorCounts": {
+          "seger": 4546,
+          "tester": 3112
+        },
+        "pathLengthUM": 29702.191446281988,
+        "boundsXYZ": {
+          "min": [
+            6188.689956188202,
+            1163,
+            2076.607028543949
+          ],
+          "max": [
+            9264.630597501178,
+            4960.392311513424,
+            8678.920495569706
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 04:10:37.773272"
+      },
+      "displayStatistics": {
+        "nodeCount": 693,
+        "edgeCount": 692,
+        "maxDeviationUM": 3.9935028700522652
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    },
+    {
+      "id": "t154-soma-214856",
+      "label": "Neuron 2",
+      "color": "#fa8ac0",
+      "sourceComponentId": 2335,
+      "somaNodeIds": [
+        214856
+      ],
+      "somaPositionsXYZ": [
+        [
+          2498,
+          2053,
+          5668
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 4960,
+        "edgeCount": 4959,
+        "branchCount": 28,
+        "terminalCount": 37,
+        "terminalCheckedCounts": {
+          "1": 37
+        },
+        "nodeCheckedCounts": {
+          "0": 4442,
+          "1": 518
+        },
+        "nodeCreatorCounts": {
+          "seger": 4630,
+          "tester": 330
+        },
+        "edgeCreatorCounts": {
+          "seger": 4446,
+          "tester": 513
+        },
+        "pathLengthUM": 19037.36455121495,
+        "boundsXYZ": {
+          "min": [
+            1831.7142201662064,
+            1362,
+            5329
+          ],
+          "max": [
+            5449.994723498821,
+            5622,
+            9347.468433737755
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 05:04:52.078741"
+      },
+      "displayStatistics": {
+        "nodeCount": 443,
+        "edgeCount": 442,
+        "maxDeviationUM": 3.994026120596056
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    },
+    {
+      "id": "t154-soma-214866",
+      "label": "Neuron 3",
+      "color": "#b69aff",
+      "sourceComponentId": 56286,
+      "somaNodeIds": [
+        214866
+      ],
+      "somaPositionsXYZ": [
+        [
+          5012,
+          2460,
+          8765
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 4560,
+        "edgeCount": 4559,
+        "branchCount": 15,
+        "terminalCount": 20,
+        "terminalCheckedCounts": {
+          "1": 20
+        },
+        "nodeCheckedCounts": {
+          "0": 3228,
+          "1": 1332
+        },
+        "nodeCreatorCounts": {
+          "seger": 3357,
+          "tester": 1203
+        },
+        "edgeCreatorCounts": {
+          "seger": 3229,
+          "tester": 1330
+        },
+        "pathLengthUM": 17181.882003632847,
+        "boundsXYZ": {
+          "min": [
+            4347,
+            1834.4213061630726,
+            7505.08233961463
+          ],
+          "max": [
+            6359.47798871994,
+            5741.574673473835,
+            10725.48657631874
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 04:48:22.784142"
+      },
+      "displayStatistics": {
+        "nodeCount": 399,
+        "edgeCount": 398,
+        "maxDeviationUM": 3.9862163042672267
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    },
+    {
+      "id": "t154-soma-155119",
+      "label": "Neuron 4",
+      "color": "#49c9a2",
+      "sourceComponentId": 131089,
+      "somaNodeIds": [
+        155119
+      ],
+      "somaPositionsXYZ": [
+        [
+          7033,
+          3330,
+          5846
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 3401,
+        "edgeCount": 3400,
+        "branchCount": 9,
+        "terminalCount": 21,
+        "terminalCheckedCounts": {
+          "1": 21
+        },
+        "nodeCheckedCounts": {
+          "0": 3000,
+          "1": 401
+        },
+        "nodeCreatorCounts": {
+          "seger": 3107,
+          "tester": 294
+        },
+        "edgeCreatorCounts": {
+          "seger": 3003,
+          "tester": 397
+        },
+        "pathLengthUM": 13869.32460348633,
+        "boundsXYZ": {
+          "min": [
+            6409,
+            1139,
+            4391
+          ],
+          "max": [
+            8109.932506561279,
+            3724,
+            9192.538516521454
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 15:08:19.566457"
+      },
+      "displayStatistics": {
+        "nodeCount": 325,
+        "edgeCount": 324,
+        "maxDeviationUM": 3.984523182088372
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    },
+    {
+      "id": "t154-soma-216068",
+      "label": "Neuron 5",
+      "color": "#f48d4e",
+      "sourceComponentId": 311,
+      "somaNodeIds": [
+        216068
+      ],
+      "somaPositionsXYZ": [
+        [
+          2022,
+          2453,
+          5670
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 2967,
+        "edgeCount": 2966,
+        "branchCount": 20,
+        "terminalCount": 27,
+        "terminalCheckedCounts": {
+          "1": 27
+        },
+        "nodeCheckedCounts": {
+          "0": 2089,
+          "1": 878
+        },
+        "nodeCreatorCounts": {
+          "seger": 2196,
+          "tester": 771
+        },
+        "edgeCreatorCounts": {
+          "seger": 2092,
+          "tester": 874
+        },
+        "pathLengthUM": 11349.554939833231,
+        "boundsXYZ": {
+          "min": [
+            1320.669207572937,
+            2152,
+            4847.816364765167
+          ],
+          "max": [
+            2854,
+            4370.785831362009,
+            6500.154524087906
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 05:02:35.965700"
+      },
+      "displayStatistics": {
+        "nodeCount": 303,
+        "edgeCount": 302,
+        "maxDeviationUM": 3.996248177452236
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    },
+    {
+      "id": "t154-soma-217410",
+      "label": "Neuron 6",
+      "color": "#54a3ff",
+      "sourceComponentId": 1470,
+      "somaNodeIds": [
+        217410
+      ],
+      "somaPositionsXYZ": [
+        [
+          3623.0019548535347,
+          4131.9996447861195,
+          7083.893295839429
+        ]
+      ],
+      "sourceStatistics": {
+        "nodeCount": 1941,
+        "edgeCount": 1940,
+        "branchCount": 3,
+        "terminalCount": 11,
+        "terminalCheckedCounts": {
+          "1": 11
+        },
+        "nodeCheckedCounts": {
+          "0": 1291,
+          "1": 650
+        },
+        "nodeCreatorCounts": {
+          "seger": 1344,
+          "tester": 597
+        },
+        "edgeCreatorCounts": {
+          "seger": 1292,
+          "tester": 648
+        },
+        "pathLengthUM": 7652.123374208187,
+        "boundsXYZ": {
+          "min": [
+            1787,
+            1909.454075962305,
+            5105.575702935457
+          ],
+          "max": [
+            3688.592872031033,
+            4352.353784561157,
+            7152
+          ]
+        },
+        "firstRecordedDate": "2025-04-23 12:22:07.577536",
+        "lastRecordedDate": "2025-04-25 05:13:29.447637"
+      },
+      "displayStatistics": {
+        "nodeCount": 161,
+        "edgeCount": 160,
+        "maxDeviationUM": 3.995754311396916
+      },
+      "annotationEvidence": "One explicitly labeled soma, user-account edits, and checked terminal nodes in the original database.",
+      "completeness": "not-asserted"
+    }
+  ]
+}

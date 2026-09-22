@@ -98,6 +98,8 @@ export class VolumeView {
     this.graphScene.add(this.keyLight.target);
     this.annotations=new THREE.Group();
     this.graphScene.add(this.annotations);
+    this.traces=new THREE.Group();this.graphScene.add(this.traces);
+    this.traceObjects=new Map();this.traceMaterials=[];
     this.clipDirection={value:new THREE.Vector3(0,0,-1)};
     this.clipFocus={value:new THREE.Vector3()};
     this.clipHalf={value:1000};
@@ -226,10 +228,34 @@ export class VolumeView {
   setDepth(value){this.material.uniforms.uDepth.value=value;this.render();}
   setAnnotations(visible){this.annotations.visible=visible;this.render();}
 
+  setTraces(traces){
+    disposeGroup(this.traces);this.traceObjects.clear();this.traceMaterials=[];
+    for(const trace of traces){
+      if(!trace.segments.length)continue;
+      const geometry=new LineSegmentsGeometry();geometry.setPositions(trace.segments);
+      const material=new LineMaterial({color:trace.color,linewidth:1.7,depthTest:true,depthWrite:true,clippingPlanes:this.clipPlanes});
+      material.resolution.set(this.container.clientWidth,this.container.clientHeight);
+      const object=new LineSegments2(geometry,material);object.frustumCulled=false;
+      this.traces.add(object);this.traceObjects.set(trace.id,object);this.traceMaterials.push(material);
+    }
+    this.render();
+  }
+
+  showTraces(visible,selected='all'){
+    this.traces.visible=visible;
+    for(const [id,object] of this.traceObjects)object.visible=selected==='all'||id===selected;
+    this.render();
+  }
+
   setRegion(origin,size){
     if(this.region){this.graphScene.remove(this.region);this.region.geometry.dispose();this.region.material.dispose();}
-    const box=new THREE.Box3(new THREE.Vector3(...origin).addScalar(-.5),new THREE.Vector3(...origin).add(new THREE.Vector3(...size)).addScalar(-.5));
-    this.region=new THREE.Box3Helper(box,'#ffc875');this.region.material.depthTest=false;
+    const box=new THREE.BoxGeometry(...size),edges=new THREE.EdgesGeometry(box);
+    const geometry=new LineSegmentsGeometry();geometry.setPositions(edges.attributes.position.array);
+    box.dispose();edges.dispose();
+    const material=new LineMaterial({color:'#ffcb50',linewidth:1.6,depthTest:false,depthWrite:false});
+    material.resolution.set(this.container.clientWidth,this.container.clientHeight);
+    this.region=new LineSegments2(geometry,material);this.region.frustumCulled=false;this.region.renderOrder=10;
+    this.region.position.fromArray(origin).add(new THREE.Vector3(...size).multiplyScalar(.5)).addScalar(-.5);
     this.graphScene.add(this.region);this.render();
   }
 
@@ -242,15 +268,6 @@ export class VolumeView {
     this.scaleBar.length=lengthVoxels;this.scaleBar.label=label;this.scaleBar.caption.textContent=label;this.render();
   }
 
-  setLocator(position){
-    if(!this.locator){
-      const element=document.createElement('span');element.className='volume-locator';
-      element.setAttribute('aria-label','Image block locator; the small outlined box uses the physical scale');
-      this.container.append(element);this.locator={element};
-    }
-    this.locator.position=new THREE.Vector3(...position);this.render();
-  }
-
   resize() {
     const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;
     const volumeRatio=Math.min(1,1000/w)*(this.interacting?.75:1);
@@ -261,6 +278,8 @@ export class VolumeView {
     this.camera.top=extent;this.camera.bottom=-extent;
     this.camera.updateProjectionMatrix();
     this.lineMaterials.forEach(m=>m.resolution.set(w,h));
+    this.traceMaterials.forEach(m=>m.resolution.set(w,h));
+    this.region?.material.resolution.set(w,h);
     this.material.uniforms.uStep.value=this.interacting?.7:.35;
     this.render();
   }
@@ -290,12 +309,6 @@ export class VolumeView {
       const fraction=[1,.5,.2,.1].find(f=>pixels*f<=this.container.clientWidth*.3)||.1;
       this.scaleBar.line.style.width=`${pixels*fraction}px`;
       this.scaleBar.caption.textContent=this.scaleBar.label.replace(/^\d+(\.\d+)?/,n=>String(Number(n)*fraction));
-    }
-    if(this.locator){
-      const p=this.locator.position.clone().project(this.camera),element=this.locator.element;
-      element.hidden=Math.abs(p.x)>1||Math.abs(p.y)>1;
-      element.style.left=`${(p.x+1)*this.container.clientWidth/2}px`;
-      element.style.top=`${(1-p.y)*this.container.clientHeight/2}px`;
     }
     const placed=[];
     this.labelEntries.forEach((entry,i)=>{

@@ -2,7 +2,7 @@
 
 Interactive GitHub Pages demo for Rubin Zhao's multiview mouse-ear reconstruction project.
 
-The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: a real WebGL 2 volume MIP, three task types for local graph review, and exportable attributed decisions demonstrating the data-engine workflow. The root remains the ear project.
+The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: WebGL 2 volume MIP views, annotated neurons in a T154 whole mouse brain, and three task types for local graph review. The root remains the ear project.
 
 - Three selected B41 trials, six synchronized camera views, distortion-aware ear and face overlays.
 - Interactive 3D ear rims and facial landmarks, with calibrated camera frustums.
@@ -24,9 +24,13 @@ The output in `dist/` is a complete static site. Fonts, renderer, data, and medi
 
 See [the versioned data contract](public/DATA_FORMAT.md). Source ranges are zero-based, end-exclusive, and retain all 100 fps source frames. These assets are specific selected recording excerpts, not the complete dataset. The reconstruction code lives in [ear_recon](https://github.com/beanli161514/ear_recon).
 
-NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document the public 600 MB microscopy block, 32³ endpoint-centered crops, original segmentation fragments, and reproducible candidate generation. The three tasks cover a connection decision between two fragments, selection among nearby fragment endpoints, and point proposals when no other fragment endpoints are nearby. Point proposals use the endpoint direction and local intensity maxima within a declared distance range. Choosing **None** in that task labels the source as a **true ending**; choosing **Uncertain** defers it without assigning a training target.
+NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document two separate acquisitions: the T154 mouse whole-brain fluorescence image with six annotated neurons, and the public RM009 macaque microscopy block used for local tasks. The whole-brain box shows the RM009 block's **1 × 1 × 0.3 mm** physical size at an illustrative position; the datasets are not registered to one another.
 
-Only requested crops and a small overview are fetched. The 3D renderer combines maximum intensity ray casting with shaded sphere annotations at display resolution, reducing volume sampling while dragging. Exported records retain the task type, full candidate set, chosen candidate or terminal label, graph context, reviewer attribution, replay state, and dataset revision. Candidate points join the graph only when selected. Reviews remain local to the browser and exported labels are marked unverified; no training or annotation upload runs in the demo.
+The three local tasks use **32³ endpoint-centered crops** and cover a connection decision between two fragments, selection among nearby fragment endpoints, and point proposals when no other fragment endpoints are nearby. Point proposals use the endpoint direction and local intensity maxima within a declared distance range. Choosing **None** in that task labels the source as a **true ending**; choosing **Uncertain** defers it without assigning a training target.
+
+The browser fetches compact whole-brain and block overviews, six neuron skeletons, and the requested task crops. The renderer combines maximum intensity ray casting with 3D graph annotations, reducing volume sampling while dragging. Whole-brain controls show all six neurons or one selected neuron, toggle their visibility, and adjust image contrast. Candidate points join the local graph only when selected. Review state stays in browser storage and can be cleared with **Reset session**; the page has no review-export control. No model training or annotation upload runs in the demo.
+
+Rebuild the T154 assets with [`export_t154_brain.py`](scripts/export_t154_brain.py) and [`export_t154_neurons.py`](scripts/export_t154_neurons.py). The NeuroFly data contract includes source requirements, commands, physical-coordinate transforms, component selection, and simplification details. T154 provenance is separate from the RM009 dataset's CC BY 4.0 license.
 
 ## Publish
 
