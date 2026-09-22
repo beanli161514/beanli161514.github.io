@@ -6,10 +6,10 @@ A trial consists of one synchronized MP4 and one compressed 3D array. A shared m
 data/
   manifest.json           # timeline, cameras, point layout, trial list
   trial-1.mp4             # BC L R / TC TL TR, 1440 × 768, 100 fps
-  trial-1.f32.gz          # gzip-compressed float32 XYZ, little endian
+  trial-1.filled.f32.gz          # gzip-compressed float32 XYZ, little endian
   trial-1.jpg             # first-frame poster
-  trial-2.{mp4,f32.gz,jpg}
-  trial-3.{mp4,f32.gz,jpg}
+  trial-2.{mp4,filled.f32.gz,jpg}
+  trial-3.{mp4,filled.f32.gz,jpg}
   shape-model.json        # left/right mean curves and 15 PCA displacement modes
 ```
 
@@ -33,12 +33,12 @@ After gzip decompression, interpret the buffer as little-endian Float32, shaped 
 - Points 19–93: 75 samples of the left ear rim, an **open** curve.
 - Points 94–168: 75 samples of the right ear rim, an **open** curve.
 
-For point `p` in local frame `i`, XYZ starts at byte `4 * 3 * (169*i + p)`. Missing points remain IEEE NaNs. Segments touching a missing point are omitted. No temporal interpolation or smoothing is added. Face landmarks retain the desktop loader's minimum two cameras and score ≥ 0.5 filter. Their head-centered coordinates are restored to calibration coordinates with the recording's per-frame transform.
+For point `p` in local frame `i`, XYZ starts at byte `4 * 3 * (169*i + p)`. Missing face landmarks are linearly interpolated in calibration-space XYZ between valid observations, using the full recording before extracting each trial. Gaps up to 50 frames (0.5 s) are filled; unbounded or longer gaps remain NaN and their segments are omitted. All missing face landmarks in these three trials were filled. Valid observations and ear curves are unchanged; no smoothing filter is applied. `face.interpolation` records this policy, and each trial’s `faceInterpolation` stores `filledPoints` and `[landmarkIndex, localStart, localEndExclusive]` runs for provenance. Face landmarks retain the desktop loader's minimum two cameras and score ≥ 0.5 filter. Their head-centered coordinates are restored to calibration coordinates with the recording's per-frame transform.
 
 Example decode:
 
 ```js
-const response = await fetch('data/trial-1.f32.gz');
+const response = await fetch('data/trial-1.filled.f32.gz');
 const bytes = new Uint8Array(await response.arrayBuffer());
 // Some hosts send Content-Encoding: gzip, causing automatic HTTP decompression.
 const raw = bytes[0] === 31 && bytes[1] === 139 ? gunzipSync(bytes) : bytes;
