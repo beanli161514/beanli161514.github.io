@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#f2f5f7">
   <title>Scalable Annotation for Connectome Construction · NeuroFly</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a2131'/%3E%3Cpath d='M16 45L31 31L48 16M31 31L17 16M31 31L49 44' fill='none' stroke='%2346d8ed' stroke-width='3'/%3E%3Cg fill='%2346d8ed'%3E%3Ccircle cx='16' cy='45' r='4'/%3E%3Ccircle cx='31' cy='31' r='5'/%3E%3Ccircle cx='48' cy='16' r='4'/%3E%3Ccircle cx='17' cy='16' r='4'/%3E%3Ccircle cx='49' cy='44' r='4'/%3E%3C/g%3E%3C/svg%3E">
-  <script type="module" crossorigin src="/assets/neurofly-v-GiFRvW.js"></script>
+  <script type="module" crossorigin src="/assets/neurofly-C7V9ILCq.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/LineSegments2-BIH21-FG.js">
-  <link rel="stylesheet" crossorigin href="/assets/neurofly-NTXiKHCE.css">
+  <link rel="stylesheet" crossorigin href="/assets/neurofly-CLGwjVJW.css">
 </head>
 <body>
   <header class="masthead">
@@ -86,31 +86,12 @@
       <div class="section-heading"><h2 id="training-title">From reviewed decisions to automated tracing</h2></div>
       <p class="training-intro">A reviewed local decision supplies a structured action label for its image and trajectory context.</p>
       <div class="training-grid">
-        <article class="rollout-panel" aria-labelledby="rollout-title">
-          <div class="training-panel-heading"><h3 id="rollout-title">Model-guided extension</h3><span>Recorded rollout</span></div>
-          <video id="training-rollout" src="./media/autonomous-extension.mp4" poster="./media/autonomous-extension-poster.webp" loop muted playsinline controls preload="none" aria-label="Recorded model-guided neuron extension rollout"></video>
-          <p class="rollout-caption">Recorded model rollout predicting successive 3D positions (Δxyz). The proposed structured head extends the action interface to the three local review tasks.</p>
-        </article>
-
         <div class="training-model-column">
-          <article class="model-interface" aria-labelledby="model-interface-title">
-            <div class="training-panel-heading"><h3 id="model-interface-title">Model interface</h3><span>Proposed action interface</span></div>
-            <div class="model-diagram" aria-label="Image, trajectory and candidate tokens feed a two-way Transformer with a learnable action query, followed by a structured action head">
-              <div class="model-inputs">
-                <div class="model-input"><span>32³ image</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Image tokens</strong></div>
-                <div class="model-input"><span>Trajectory history</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Trajectory tokens</strong></div>
-                <div class="model-input"><span>Task + candidates</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Candidate tokens</strong></div>
-              </div>
-              <div class="model-merge" aria-hidden="true"><span>↓</span></div>
-              <div class="transformer-block"><strong>Two-way Transformer</strong><span>Learnable action query</span></div>
-              <div class="model-flow-arrow" aria-hidden="true">↓</div>
-              <div class="action-head"><h4>Structured action head</h4>
-                <div id="training-head-connection" class="head-row" data-head="fragment-connection"><span>Connect fragments</span><strong>Accept / Reject</strong></div>
-                <div id="training-head-endpoint" class="head-row" data-head="endpoint-selection"><span>Select an endpoint</span><strong>B / C / D</strong></div>
-                <div id="training-head-extension" class="head-row" data-head="point-proposal"><span>Extend or stop</span><strong>B / C / D / None</strong></div>
-              </div>
-            </div>
-            <p class="training-learning-note">Curated labels supervise the action head. At inference, the model applies an action, updates the graph, and repeats with the next local window.</p>
+          <article class="rollout-panel" aria-labelledby="rollout-title">
+            <div class="training-panel-heading"><h3 id="rollout-title">Annotated fiber replay</h3><span>96³ voxels · 1 µm/voxel</span></div>
+            <div class="training-volume-stage"><div id="training-volume" aria-label="Interactive microscopy volume with a progressively revealed annotated fiber"></div><div id="training-volume-status" class="training-volume-status" role="status">Loading the 3D annotation replay…</div><span class="orbit-hint">Drag to orbit · scroll to zoom</span></div>
+            <div class="training-transport"><button id="training-play" type="button" disabled>Play</button><button id="training-restart" class="text-button" type="button" disabled>Restart</button><label class="training-timeline-label" for="training-timeline"><span>Annotation step</span><input id="training-timeline" type="range" min="1" max="1" value="1" step="1" disabled aria-label="Fiber reveal timeline"></label><output id="training-step" for="training-timeline" aria-live="off">1 / —</output></div>
+            <p class="rollout-caption">The original annotation nodes and edges are revealed in order over the microscopy volume.</p>
           </article>
 
           <article id="training-example" class="training-example" aria-live="polite" aria-atomic="true" aria-labelledby="training-example-title">
@@ -121,6 +102,62 @@
             <p id="training-target-detail" class="training-target-detail">The selected action will appear here with its task context.</p>
             <p id="training-status" class="training-status">Pending review</p>
           </article>
+        </div>
+
+        <div class="training-model-column">
+          <article class="model-interface" aria-labelledby="model-interface-title">
+            <div class="training-panel-heading"><h3 id="model-interface-title">Model architecture</h3><span>Structured action interface</span></div>
+            <div class="structured-output"><h4>Structured action head <span>Conditioned on the local task and candidates</span></h4>
+                <div id="training-head-connection" class="head-row" data-head="fragment-connection"><span>Connect fragments</span><strong>Accept / Reject</strong></div>
+                <div id="training-head-endpoint" class="head-row" data-head="endpoint-selection"><span>Select an endpoint</span><strong>B / C / D</strong></div>
+                <div id="training-head-extension" class="head-row" data-head="point-proposal"><span>Extend or stop</span><strong>B / C / D / None</strong></div>
+            </div>
+            <svg id="training-model-diagram" class="slide-model-diagram" viewBox="0 0 760 830" role="img" aria-labelledby="model-svg-title model-svg-description">
+              <title id="model-svg-title">Trajectory and image tokens in the two-way Transformer</title>
+              <desc id="model-svg-description">Read upward from a real 32-cubed microscopy volume, shown with an oblique maximum-intensity projection. Five genuine consecutive annotation points provide trajectory history. The trajectory tokenizer produces blue action tokens; the image tokenizer produces yellow patch tokens. A red learnable embedding joins them in a two-way Transformer. Its output passes through a small prediction network to produce the next action.</desc>
+              <defs>
+                <marker id="model-arrow-black" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#000"/></marker>
+                <marker id="model-arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" fill="#00a9f4"/></marker>
+                <radialGradient id="model-history-sphere" cx="30%" cy="25%"><stop offset="0" stop-color="#a6efff"/><stop offset="0.4" stop-color="#00b8ee"/><stop offset="1" stop-color="#006481"/></radialGradient>
+              </defs>
+              <rect width="760" height="830" fill="#fff"/>
+              <g stroke="#000" stroke-width="2" fill="none" marker-end="url(#model-arrow-black)">
+                <path d="M709 125V74"/><path d="M670 47H633"/><path d="M531 47H479"/>
+              </g>
+              <rect x="674" y="27" width="70" height="40" rx="14" fill="#f21e0b"/>
+              <text x="472" y="57" text-anchor="end" font-family="Times New Roman,serif" font-size="31" font-style="italic">a<tspan baseline-shift="sub" font-size="21">t+1</tspan></text>
+              <g class="model-network" stroke="#929292" stroke-width="0.9" fill="none">
+                <path d="M546 25 582 12M546 25 582 30M546 25 582 48M546 25 582 66M546 25 582 84M546 47 582 12M546 47 582 30M546 47 582 48M546 47 582 66M546 47 582 84M546 69 582 12M546 69 582 30M546 69 582 48M546 69 582 66M546 69 582 84M582 12 618 25M582 12 618 47M582 12 618 69M582 30 618 25M582 30 618 47M582 30 618 69M582 48 618 25M582 48 618 47M582 48 618 69M582 66 618 25M582 66 618 47M582 66 618 69M582 84 618 25M582 84 618 47M582 84 618 69"/>
+                <g fill="#fff"><circle cx="546" cy="25" r="5"/><circle cx="546" cy="47" r="5"/><circle cx="546" cy="69" r="5"/><circle cx="582" cy="12" r="5"/><circle cx="582" cy="30" r="5"/><circle cx="582" cy="48" r="5"/><circle cx="582" cy="66" r="5"/><circle cx="582" cy="84" r="5"/><circle cx="618" cy="25" r="5"/><circle cx="618" cy="47" r="5"/><circle cx="618" cy="69" r="5"/></g>
+              </g>
+              <rect x="12" y="125" width="736" height="122" rx="26" fill="#979797"/>
+              <text x="380" y="197" text-anchor="middle" font-family="Arial,sans-serif" font-size="31" font-weight="700">TwoWay Transformer</text>
+              <g stroke="#000" stroke-width="2" fill="none" marker-end="url(#model-arrow-black)">
+                <path d="M70 294V251"/><path d="M166 294V251"/><path d="M262 294V251"/><path d="M358 294V251"/><path d="M457 294V251"/><path d="M628 294V251"/>
+                <path d="M70 387V341"/><path d="M166 387V341"/><path d="M262 387V341"/><path d="M358 387V341"/><path d="M457 387V341"/><path d="M628 387V341"/>
+                <path d="M711 408V252"/>
+              </g>
+              <g fill="#00a6f2"><rect x="30" y="296" width="80" height="41" rx="13"/><rect x="126" y="296" width="80" height="41" rx="13"/><rect x="222" y="296" width="80" height="41" rx="13"/><rect x="318" y="296" width="80" height="41" rx="13"/></g>
+              <g font-family="Times New Roman,serif" font-size="28" font-style="italic" text-anchor="middle"><text x="70" y="323">a<tspan baseline-shift="sub" font-size="19">t−3</tspan></text><text x="166" y="323">a<tspan baseline-shift="sub" font-size="19">t−2</tspan></text><text x="262" y="323">a<tspan baseline-shift="sub" font-size="19">t−1</tspan></text><text x="358" y="323">a<tspan baseline-shift="sub" font-size="19">t</tspan></text></g>
+              <g fill="#fabb00"><rect x="418" y="296" width="78" height="41" rx="13"/><rect x="589" y="296" width="78" height="41" rx="13"/></g>
+              <text x="542" y="326" text-anchor="middle" font-family="Arial,sans-serif" font-size="35" font-weight="700">···</text>
+              <rect x="26" y="389" width="387" height="86" rx="24" fill="#979797"/><rect x="425" y="389" width="240" height="86" rx="24" fill="#979797"/>
+              <g font-family="Arial,sans-serif" font-size="25" font-weight="700" text-anchor="middle"><text x="219.5" y="440">Trajectory Tokenizer</text><text x="545" y="440">Image Tokenizer</text></g>
+              <rect x="676" y="410" width="70" height="41" rx="13" fill="#f21e0b"/>
+              <g font-family="Arial,sans-serif" font-size="18" font-weight="700" text-anchor="middle"><text x="711" y="480">Learnable</text><text x="711" y="504">Embedding</text></g>
+              <g class="model-volume-cube">
+                <path d="M250 560 565 534 410 480 95 506Z M250 560 565 534 565 770 250 796Z M250 560 95 506 95 742 250 796Z" fill="#111"/>
+                <image href="./data/tracing-context-oblique.png" x="95" y="480" width="470" height="316" preserveAspectRatio="none"/>
+                <g stroke="#ec2b30" stroke-width="1.2" fill="none"><path d="M95 506 410 480 565 534 250 560Z M95 506V742L250 796 565 770V534M250 560V796M410 480V716L95 742M410 716 565 770"/></g>
+                <g id="training-diagram-trajectory" data-source-node-ids="1222 1221 1220 1219 1218" data-coordinate-mapping="screen = (250,560) + (x+.5)/32*(315,-26) + (y+.5)/32*(0,236) + (z+.5)/32*(-155,-54)" fill="url(#model-history-sphere)" stroke="#087b94" stroke-width="0.8"><path d="M327.969 667.25 327.812 649.312 327.656 631.375 332.344 622.5 346.875 612.812" fill="none" stroke="#e9393f" stroke-width="1.5"/><circle cx="327.969" cy="667.25" r="4.5"/><circle cx="327.812" cy="649.312" r="4.5"/><circle cx="327.656" cy="631.375" r="4.5"/><circle cx="332.344" cy="622.5" r="4.5"/><circle cx="346.875" cy="612.812" r="4.5"/></g>
+              </g>
+              <path d="M346.875 607.312V484" stroke="#00a9f4" stroke-width="4" fill="none" marker-end="url(#model-arrow-blue)"/>
+              <path d="M545 523V484" stroke="#000" stroke-width="3" fill="none" marker-end="url(#model-arrow-black)"/>
+            </svg>
+            <p class="training-learning-note">Curated labels supervise the action head. At inference, the model applies an action, updates the graph, and repeats with the next local window.</p>
+          </article>
+
+
         </div>
       </div>
       <p class="training-note">Uncertain cases are deferred and excluded from action labels. These browser examples illustrate supervision pending curation; they do not train a model.</p>
