@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Double Helix, a physical model designed and made by Rubin Zhao. Photographs and an interactive 3D design.">
+  <meta name="theme-color" content="#f2f5f7">
+  <title>Double Helix · Rubin Zhao</title>
+  <script type="module" crossorigin src="/assets/helix-DwSxVzKo.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/site-DEoEKQO_.js">
+  <link rel="modulepreload" crossorigin href="/assets/OrbitControls-XMzdh5ns.js">
+  <link rel="stylesheet" crossorigin href="/assets/site-q7Jm0jvP.css">
+  <link rel="stylesheet" crossorigin href="/assets/helix-D6fcTzai.css">
+</head>
+<body class="helix-page">
+  <header class="site-header">
+    <a class="site-brand" href="/">Rubin Zhao</a>
+    <nav class="site-nav" aria-label="Projects"><a href="/neurofly/">NeuroFly</a><a href="/ear/">Ear Reconstruction</a><a href="/double-helix/" aria-current="page">Double Helix</a></nav>
+  </header>
+  <main class="helix-main">
+    <section class="helix-intro" aria-labelledby="page-title">
+      <h1 id="page-title">Double Helix</h1>
+      <p>Designed and made by Rubin Zhao.</p>
+    </section>
+    <div class="helix-workspace">
+      <section class="helix-panel design-panel" aria-labelledby="design-title">
+        <div class="helix-panel-head"><h2 id="design-title">3D design</h2><div class="helix-parts" role="group" aria-label="Choose a model part"><button type="button" data-part="body" aria-pressed="true" disabled>Body</button><button type="button" data-part="cap" aria-pressed="false" disabled>Cap</button></div></div>
+        <div id="helix-view" class="helix-model-stage">
+          <div id="helix-status" role="status">Loading model…</div>
+          <span class="helix-hint">Drag to rotate · scroll to zoom</span>
+        </div>
+        <div class="helix-view-controls"><button type="button" id="helix-rotate" aria-pressed="true" disabled>Auto rotate</button><button type="button" id="helix-reset" disabled>Reset view</button><div class="helix-downloads"><a href="/helix/body.stl" download="Double Helix Body v2.0.stl">Body STL ↓</a><a href="/helix/cap.stl" download="Double Helix Cap v2.0.stl">Cap STL ↓</a></div></div>
+      </section>
+      <section class="helix-panel photo-panel" aria-labelledby="photos-title">
+        <div class="helix-panel-head"><h2 id="photos-title">Photographs</h2><span id="photo-count" aria-live="polite">1 / 5</span></div>
+        <a id="photo-link" class="helix-photo-stage" href="/helix/photo3.webp" target="_blank" rel="noreferrer" aria-label="Open photograph at full size">
+          <img id="helix-photo" src="/helix/photo3.webp" alt="A finished double helix model with multicolored illuminated rungs, reflected in a clear cube." width="1920" height="1155" fetchpriority="high">
+        </a>
+        <div class="photo-selector" role="group" aria-label="Choose a photograph">
+          <button type="button" data-photo="3" aria-label="Photograph 1: model and reflection" aria-pressed="true"><img src="/helix/photo3.webp" alt="" width="90" height="60"></button>
+          <button type="button" data-photo="0" aria-label="Photograph 2: model bodies" aria-pressed="false"><img src="/helix/photo0.webp" alt="" width="90" height="60"></button>
+          <button type="button" data-photo="1" aria-label="Photograph 3: two finished models" aria-pressed="false"><img src="/helix/photo1.webp" alt="" width="90" height="60"></button>
+          <button type="button" data-photo="4" aria-label="Photograph 4: model held in hand" aria-pressed="false"><img src="/helix/photo4.webp" alt="" width="90" height="60"></button>
+          <button type="button" data-photo="2" aria-label="Photograph 5: models in the dark" aria-pressed="false"><img src="/helix/photo2.webp" alt="" width="90" height="60"></button>
+          <span>Click photo to enlarge</span>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "meshes": [
+    {
+      "id": "body",
+      "viewer": "body.glb",
+      "download": "body.stl",
+      "triangleCount": 62464,
+      "indexedVertexCount": 31154,
+      "bounds": {
+        "min": [
+          -8.0,
+          -7.999424934387207,
+          -1.734723475976807e-15
+        ],
+        "max": [
+          8.0,
+          7.999424934387207,
+          41.0
+        ]
+      },
+      "dimensions": [
+        16.0,
+        15.998849868774414,
+        41.0
+      ],
+      "center": [
+        0.0,
+        0.0,
+        20.5
+      ],
+      "coordinateUnits": "Original STL units; the source format specifies no physical unit.",
+      "viewerBytes": 749340,
+      "downloadBytes": 3123284,
+      "viewerSHA256": "a9d1b2d67f77660a340bfcd1bab3fc5ca8ce1d0a3a79efaf9a128b58e8e9b01a",
+      "downloadSHA256": "122ab589f01885958dec637462899ed96d2d74cd9a54b27db3c8ce47bec5d73c",
+      "sourceSHA256": "dc8f8fcc33012ea08b1cc5938c6cff362d40017f087f444e5bb5e549092e5e53",
+      "geometrySHA256": "f745bb73b7501ff2fedaf5e5effd14ba513e941d164a3e7196775dd6dd5e8f37",
+      "geometryPreservation": "Every original triangle coordinate bit pattern and winding retained; no geometric transformation or simplification.",
+      "normals": "Normal attribute omitted. GLTFLoader uses flat shading derived from the exact triangle surfaces."
+    },
+    {
+      "id": "cap",
+      "viewer": "cap.glb",
+      "download": "cap.stl",
+      "triangleCount": 4128,
+      "indexedVertexCount": 2064,
+      "bounds": {
+        "min": [
+          -8.0,
+          12.500575065612793,
+          -0.10000000149011612
+        ],
+        "max": [
+          8.0,
+          28.49942398071289,
+          4.900000095367432
+        ]
+      },
+      "dimensions": [
+        16.0,
+        15.998848915100098,
+        5.000000096857548
+      ],
+      "center": [
+        0.0,
+        20.499999523162842,
+        2.4000000469386578
+      ],
+      "coordinateUnits": "Original STL units; the source format specifies no physical unit.",
+      "viewerBytes": 50244,
+      "downloadBytes": 206484,
+      "viewerSHA256": "642c054af62cdee5784d96b75a78c4d4d1d11e0a3869978f559020db721d4c8c",
+      "downloadSHA256": "c1484d0aa52d56460d432414a3bf316acac3161b7dd4625362c70bf19c1231f8",
+      "sourceSHA256": "e4a96f044ae34d3fff1770968abe0b79258082b36d962c101511140143a5d7aa",
+      "geometrySHA256": "751e44cb62e7ba87f66eeb653c620d9f6689724667cf0266b97cc7521e0a5cd2",
+      "geometryPreservation": "Every original triangle coordinate bit pattern and winding retained; no geometric transformation or simplification.",
+      "normals": "Normal attribute omitted. GLTFLoader uses flat shading derived from the exact triangle surfaces."
+    }
+  ],
+  "photos": [
+    {
+      "file": "photo0.webp",
+      "width": 1182,
+      "height": 665,
+      "bytes": 99792,
+      "sha256": "519bb2f5bdd41460c64fcf59d38979d8a552fb4ce63545ec925eaf59f78fa33a",
+      "colorSpace": "sRGB",
+      "metadata": "EXIF, ICC and XMP removed"
+    },
+    {
+      "file": "photo1.webp",
+      "width": 1086,
+      "height": 724,
+      "bytes": 23652,
+      "sha256": "2e6eb1fc51762a05b070c14b77c7ac9b2fbe0a5f15ae778e18f8cb525eca51f8",
+      "colorSpace": "sRGB",
+      "metadata": "EXIF, ICC and XMP removed"
+    },
+    {
+      "file": "photo2.webp",
+      "width": 724,
+      "height": 1086,
+      "bytes": 16052,
+      "sha256": "2ef729d8f9fed0e95ac4b9c9f8d4371d08a4a6a97c2a6394a7e61c43709d364d",
+      "colorSpace": "sRGB",
+      "metadata": "EXIF, ICC and XMP removed"
+    },
+    {
+      "file": "photo3.webp",
+      "width": 1920,
+      "height": 1155,
+      "bytes": 76436,
+      "sha256": "933d858150e9bf372d4c4ebf23e91c12bd22d1c8453315ab5de4fb9ead01957a",
+      "colorSpace": "sRGB",
+      "metadata": "EXIF, ICC and XMP removed"
+    },
+    {
+      "file": "photo4.webp",
+      "width": 768,
+      "height": 1024,
+      "bytes": 37338,
+      "sha256": "70128344efdd9d4d713cd110377a3130605e386007f570d430958b1df014d595",
+      "colorSpace": "sRGB",
+      "metadata": "EXIF, ICC and XMP removed"
+    }
+  ],
+  "sourceCoordinateSystem": "Unmodified XYZ from the supplied STL files; body long axis is +Z.",
+  "assembly": "Components retained in their authored separate positions; no assembled transform is asserted."
+}
