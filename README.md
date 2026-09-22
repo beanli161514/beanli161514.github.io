@@ -2,6 +2,8 @@
 
 Interactive GitHub Pages demo for Rubin Zhao's multiview mouse-ear reconstruction project.
 
+The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: a real WebGL 2 volume MIP, three local graph-review cases, and exportable attributed decisions demonstrating the data-engine workflow. The root remains the ear project.
+
 - Three selected B41 trials, six synchronized camera views, distortion-aware ear and face overlays.
 - Interactive 3D ear rims and facial landmarks, with calibrated camera frustums.
 - Shared frame slider, play/pause, and playback speed.
@@ -21,6 +23,8 @@ The output in `dist/` is a complete static site. Fonts, renderer, data, and medi
 ## Data
 
 See [the versioned data contract](public/DATA_FORMAT.md). Source ranges are zero-based, end-exclusive, and retain all 100 fps source frames. These assets are specific selected recording excerpts, not the complete dataset. The reconstruction code lives in [ear_recon](https://github.com/beanli161514/ear_recon).
+
+NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document the public 600 MB microscopy block, derived 96³ crops, coordinate layout, and the deliberately unresolved crossing example. The overview plus all three volumes total 770 KB compressed; only requested crops are fetched. The 3D renderer uses maximum intensity ray casting with a lower sampling density while dragging, and renders only on interaction. No model inference, training, or annotation upload happens in the demo. Visitor labels stay in local browser storage and exported labels remain marked unverified.
 
 ## Publish
 
