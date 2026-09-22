@@ -139,7 +139,7 @@ export class VolumeView {
     });
   }
 
-  enableAutoRotation(speed=.2){
+  enableAutoRotation(speed=.6){
     if(this.autoRotation)return;
     const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
     let visible=false,paused=false,frame=0,lastTime=0,resumeTimer;
