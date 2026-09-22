@@ -100,7 +100,7 @@ The whole-brain context is fluorescence microscopy from the user-provided **`T15
 
 T154 source provenance is recorded separately from the public RM009 dataset. The RM009 Zenodo **CC BY 4.0** license is not asserted for the user-provided T154 image or annotation database. Metadata records the source filenames, the T154 database SHA256, the checksum of the valid low-resolution image data read from the IMS pyramid, and checksums of the generated assets. The full 279.9 GB IMS file is not hashed or read in full.
 
-The displayed neurons are six genuine soma-bearing components from the T154 database. They are described as **annotated neurons**, not as complete or independently validated reconstructions. The browser can show all six or isolate an individual neuron; image contrast and neuron visibility are separate controls.
+The displayed neurons are six genuine soma-bearing components from the T154 database. They are described as **annotated neurons**, not as complete or independently validated reconstructions. The whole-brain view shows all six together with a fixed display contrast; visitors can rotate, zoom, and reset the view.
 
 
 ### Image dimensions and browser assets
