@@ -3,62 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Explore NeuroFly's data-engine workflow: inspect real 3D microscopy, review candidate connections, and turn each decision into a traceable training record. Research by Rubin Zhao.">
+  <meta name="description" content="NeuroFly reformulates neuron reconstruction as structured graph decisions with local 3D image context and attributed review records. Research demo by Rubin Zhao.">
   <meta name="theme-color" content="#f2f5f7">
-  <title>NeuroFly — Big volumes. Small decisions.</title>
+  <title>NeuroFly: a data engine for neuron reconstruction</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230a2131'/%3E%3Cpath d='M16 45L31 31L48 16M31 31L17 16M31 31L49 44' fill='none' stroke='%2346d8ed' stroke-width='3'/%3E%3Cg fill='%2346d8ed'%3E%3Ccircle cx='16' cy='45' r='4'/%3E%3Ccircle cx='31' cy='31' r='5'/%3E%3Ccircle cx='48' cy='16' r='4'/%3E%3Ccircle cx='17' cy='16' r='4'/%3E%3Ccircle cx='49' cy='44' r='4'/%3E%3C/g%3E%3C/svg%3E">
-  <script type="module" crossorigin src="/assets/neurofly-BRzmnxwI.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/LineSegments2-Cpc2NeVE.js">
-  <link rel="stylesheet" crossorigin href="/assets/neurofly-C6QD17DU.css">
+  <script type="module" crossorigin src="/assets/neurofly-Dt-o1_T-.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/LineSegments2-Cai1-y6M.js">
+  <link rel="stylesheet" crossorigin href="/assets/neurofly-CXOs6zCm.css">
 </head>
 <body>
   <header class="masthead">
-    <a class="wordmark" href="/neurofly/" aria-label="NeuroFly home">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 25 16 16 26 6M16 16 7 6M16 16 27 25"/><circle cx="5" cy="25" r="2"/><circle cx="16" cy="16" r="3"/><circle cx="26" cy="6" r="2"/><circle cx="7" cy="6" r="2"/><circle cx="27" cy="25" r="2"/></svg>
-      NeuroFly<span>/</span><span class="wordmark-sub">THE DATA ENGINE</span>
-    </a>
+    <a class="wordmark" href="/neurofly/" aria-label="NeuroFly home">NeuroFly</a>
     <nav aria-label="Project navigation"><a href="/">Ear reconstruction</a><a href="https://github.com/beanli161514/neurofly" target="_blank" rel="noreferrer">GitHub <span aria-hidden="true">↗</span></a></nav>
   </header>
 
   <main>
     <section class="intro" aria-labelledby="page-title">
       <div class="intro-main">
-        <p class="eyebrow"><span class="status-dot"></span>3D MICROSCOPY · HUMAN + AI</p>
-        <h1 id="page-title">Big volumes.<br><span>Small decisions.</span></h1>
-        <p class="dek">Turn neuron reconstruction into a sequence of focused reviews.<br class="desktop-break"> Inspect a local volume. Judge one connection. Build better training data.</p>
+        <h1 id="page-title">NeuroFly: a data engine for neuron reconstruction</h1>
+        <p class="author">Rubin Zhao</p>
+        <p class="dek">NeuroFly extracts neuron fragments through learning-based segmentation and automated tracing, then reformulates fragment assembly as structured decisions: accept, reject, or uncertain. Tasks generated from unchecked endpoints pair candidate connections with local 3D image context for human or vision-language model (VLM) review. Outcomes update the neuron graph and retain reviewer attribution and status for training and evaluation.</p>
       </div>
-      <aside class="intro-note" aria-label="About this demonstration">
-        <span class="prototype-label">INTERACTIVE WORKFLOW DEMO</span>
-        <p>Whole-brain reconstruction is a graph problem.<br>Human attention belongs at the uncertain edges.</p>
-        <a href="#workspace">Try a review <span aria-hidden="true">↓</span></a>
-      </aside>
     </section>
 
     <section class="scale-strip" aria-label="From large volumes to local review windows">
       <div class="scale-context">
         <div id="scale-overview" aria-label="Location of the review window in the source volume"></div>
-        <div><p class="eyebrow">GLOBAL CONTEXT → LOCAL EVIDENCE</p><p id="scale-caption">Explore a small window from a larger microscopy volume.</p></div>
+        <div><p class="eyebrow">SOURCE VOLUME AND REVIEW WINDOW</p><p id="scale-caption">Each task uses a 32 × 32 × 32 voxel window from the source volume.</p></div>
       </div>
       <div class="scale-transfer"><span class="transfer-label">VOLUME DATA LOADED</span><strong id="loaded-bytes">—</strong><span>Overview + requested windows only.</span></div>
     </section>
 
     <section id="workspace" class="workspace" aria-labelledby="workspace-title">
       <div class="section-heading">
-        <div><span class="section-number">01 /</span><h2 id="workspace-title">Review a connection</h2></div>
-        <span class="workspace-label"><i></i>Real microscopy · 3D MIP</span>
+        <div><span class="section-number">01 /</span><h2 id="workspace-title">Graph review</h2></div>
+        <span class="workspace-label">3D maximum intensity projection</span>
       </div>
       <div class="task-toolbar"><div id="task-tabs" class="task-tabs" role="group" aria-label="Select a review task"></div><span id="review-progress" class="review-progress" aria-live="polite">0 reviewed</span></div>
 
       <div class="workstation">
         <article class="volume-panel" aria-label="3D volume viewer">
-          <div class="volume-heading"><h3>Local evidence <span>/ maximum intensity projection</span></h3><div class="view-presets" role="group" aria-label="Volume orientation"><button id="view-xy" type="button" title="View along Z">XY</button><button id="view-xz" type="button" title="View along Y">XZ</button><button id="view-yz" type="button" title="View along X">YZ</button><button id="view-reset" type="button" title="Reset 3D view" aria-label="Reset 3D view">↺</button></div></div>
+          <div class="volume-heading"><h3>Local image volume</h3><div class="view-presets" role="group" aria-label="Volume orientation"><button id="view-xy" type="button" title="View along Z">XY</button><button id="view-xz" type="button" title="View along Y">XZ</button><button id="view-yz" type="button" title="View along X">YZ</button><button id="view-reset" type="button" title="Reset 3D view" aria-label="Reset 3D view">↺</button></div></div>
           <div class="volume-stage">
             <div id="volume-view" aria-label="Interactive 3D microscopy volume"></div>
             <div id="volume-status" class="volume-status" role="status">Preparing the review volume…</div>
-            <div class="volume-corner"><span class="live-mark"></span>ROTATABLE VOLUME</div>
             <div class="orbit-hint">Drag to orbit <span>·</span> scroll to zoom</div>
           </div>
-          <div class="volume-legend" aria-label="Annotation colors"><span><i class="legend-source"></i>Source endpoint</span><span><i class="legend-candidate"></i>Candidate connection</span><span><i class="legend-existing"></i>Existing fragments</span></div>
+          <div class="volume-legend" aria-label="Annotation colors"><span><i class="legend-source"></i>Source fragment · A</span><span><i class="legend-candidate"></i>Candidate fragment · B</span><span><i class="legend-existing"></i>Other fragments</span><span><i class="legend-edge"></i>Candidate edge</span></div>
           <div class="volume-controls">
             <label class="check"><input id="annotations-toggle" type="checkbox" checked> Annotations</label>
             <label class="range-control" for="contrast"><span>Contrast</span><input id="contrast" type="range" min="0.2" max="3" step="0.05" value="1"></label>
@@ -67,47 +58,46 @@
         </article>
 
         <aside class="decision-panel" aria-labelledby="task-title">
-          <div class="decision-top"><span class="eyebrow">ONE STRUCTURED QUESTION</span><span id="task-number" class="task-number">TASK —</span></div>
-          <h3 id="task-title">Should this edge exist?</h3>
-          <p id="task-context" class="task-context">Follow the image evidence between the highlighted endpoints. Rotate the volume to separate crossing structures.</p>
+          <div class="decision-top"><span class="eyebrow">CANDIDATE CONNECTION</span><span id="task-number" class="task-number">TASK —</span></div>
+          <h3 id="task-title">Should this candidate connection be accepted?</h3>
+          <p id="task-context" class="task-context">Inspect the image evidence between source endpoint A and candidate endpoint B. Rotate the volume to distinguish overlapping structures.</p>
           <dl class="task-details"><div><dt>Evidence</dt><dd id="task-source">Loading source…</dd></div><div><dt>Local window</dt><dd id="task-bytes">—</dd></div></dl>
           <div class="decision-actions" role="group" aria-label="Review the candidate connection">
-            <button id="decision-accept" class="decision-button accept" type="button"><span class="decision-symbol" aria-hidden="true">✓</span><span>Yes, connect</span><kbd>1</kbd></button>
-            <button id="decision-reject" class="decision-button reject" type="button"><span class="decision-symbol" aria-hidden="true">×</span><span>No, keep separate</span><kbd>2</kbd></button>
-            <button id="decision-uncertain" class="decision-button uncertain" type="button"><span class="decision-symbol" aria-hidden="true">?</span><span>Can’t tell</span><kbd>3</kbd></button>
+            <button id="decision-accept" class="decision-button accept" type="button"><span>Accept</span><kbd>1</kbd></button>
+            <button id="decision-reject" class="decision-button reject" type="button"><span>Reject</span><kbd>2</kbd></button>
+            <button id="decision-uncertain" class="decision-button uncertain" type="button"><span>Uncertain</span><kbd>3</kbd></button>
           </div>
-          <p id="decision-feedback" class="decision-feedback" role="status" aria-live="polite">Your decision will update the graph and create a review record.</p>
+          <p id="decision-feedback" class="decision-feedback" role="status" aria-live="polite">A decision updates the graph status and records the review outcome.</p>
           <div class="decision-footer"><button id="undo-decision" class="text-button" type="button" disabled>Undo decision</button><button id="next-task" class="next-button" type="button" disabled>Next task <span aria-hidden="true">→</span></button></div>
-          <p class="local-note"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="7" width="8" height="7" rx="1.5"/><path d="M5.5 7V4a2.5 2.5 0 0 1 5 0v3"/></svg>Demo decisions stay in your browser.</p>
+          <p class="local-note">Session records are stored locally in this browser.</p>
         </aside>
       </div>
-      <p class="viewer-note">The browser renders a real 3D intensity volume, with points and vectors in the same coordinate system. A local window keeps the interaction lightweight.</p>
+      <p class="viewer-note">Points and edges share the image volume’s 3D coordinate system. The candidate edge is white before review, then green (accepted), red (rejected), or purple (uncertain).</p>
     </section>
 
     <section class="engine-section" aria-labelledby="engine-title">
-      <div class="section-heading"><div><span class="section-number">02 /</span><h2 id="engine-title">A decision becomes data</h2></div><span class="mono quiet">IMAGE + GRAPH + REVIEW RECORDS</span></div>
-      <div class="engine-intro"><p>The action space is small. The record is rich.</p><span>Each review retains its context, outcome, and attribution.</span></div>
+      <div class="section-heading"><div><span class="section-number">02 /</span><h2 id="engine-title">Structured annotations and the data-engine cycle</h2></div></div>
+      <div class="engine-intro"><p>Model predictions → human / VLM review → curated data → improved predictions.</p></div>
       <div class="engine-grid">
         <div class="pipeline" aria-label="Data engine lifecycle">
-          <article id="pipeline-review" class="pipeline-stage active"><span class="stage-index">01</span><div><h3>Propose a task</h3><p>Unchecked endpoints and candidate fragments define a local, answerable question.</p><span class="stage-tag">IMAGE WINDOW + CANDIDATE EDGE</span></div></article>
-          <article id="pipeline-graph" class="pipeline-stage"><span class="stage-index">02</span><div><h3>Update the graph</h3><p id="graph-status">Accepted edges connect fragments. Rejected edges stay separate. Uncertainty stays visible.</p><span class="stage-tag">YES / NO / CAN’T TELL</span></div></article>
-          <article id="pipeline-data" class="pipeline-stage"><span class="stage-index">03</span><div><h3>Retain the supervision</h3><p>Validate the attributed reviews for training and evaluation. Keep uncertain cases in the review queue.</p><span class="stage-tag">STRUCTURED REVIEW RECORD</span></div></article>
-          <div class="loop-note"><span aria-hidden="true">↳</span><p>Better proposals feed the next review cycle.<br><span>The training loop is illustrated here; models are not retrained in the browser.</span></p></div>
+          <article id="pipeline-review" class="pipeline-stage active"><span class="stage-index">01</span><div><h3>Task generation</h3><p>Unchecked neuron endpoints define candidate connections, each paired with local image context for review.</p><span class="stage-tag">IMAGE WINDOW + CANDIDATE EDGE</span></div></article>
+          <article id="pipeline-graph" class="pipeline-stage"><span class="stage-index">02</span><div><h3>Graph update</h3><p id="graph-status">Accepted edges connect fragments. Rejected connections remain separate. Uncertain cases retain their review status.</p><span class="stage-tag">ACCEPT / REJECT / UNCERTAIN</span></div></article>
+          <article id="pipeline-data" class="pipeline-stage"><span class="stage-index">03</span><div><h3>Training and evaluation data</h3><p>Review records retain image context, graph state, reviewer attribution, and status. Curated records support subsequent training and evaluation.</p><span class="stage-tag">ATTRIBUTED REVIEW RECORDS</span></div></article>
         </div>
 
         <article class="record-panel" aria-labelledby="record-title">
-          <div class="record-heading"><div><span class="record-led"></span><h3 id="record-title">Review record</h3></div><span class="mono">JSON / LOCAL SESSION</span></div>
+          <div class="record-heading"><div><h3 id="record-title">Review record</h3></div><span class="mono">JSON / LOCAL SESSION</span></div>
           <div class="record-stats" aria-label="Review outcomes"><div><strong id="records-count">0</strong><span>Reviewed</span></div><div><strong id="positive-count">0</strong><span><i class="stat-yes"></i>Accepted</span></div><div><strong id="negative-count">0</strong><span><i class="stat-no"></i>Rejected</span></div><div><strong id="uncertain-count">0</strong><span><i class="stat-uncertain"></i>Uncertain</span></div></div>
-          <pre id="record-json" tabindex="0" aria-label="Structured review record">Make a decision above to inspect its record.</pre>
+          <pre id="record-json" tabindex="0" aria-label="Structured review record">Select a review outcome to inspect the structured record.</pre>
           <div class="record-footer"><button id="reset-session" class="text-button" type="button">Reset session</button><button id="export-records" class="outline-button" type="button">Export records <span aria-hidden="true">↓</span></button></div>
         </article>
       </div>
     </section>
 
-    <section class="context-note" aria-label="Project scope"><h2>From cold start to a data engine.</h2><p>At terabyte and petabyte scale, the full image stays in storage. Local image windows and a neuron graph define the work. The public NeuroFly repository provides tools for creating initial reconstruction data; this demo explores standardized review for the next learning cycle. The examples replay saved annotations from a 600 MB public sample, using display-normalized 8-bit crops. Visitor reviews remain unverified.</p><a href="https://github.com/beanli161514/neurofly" target="_blank" rel="noreferrer">Explore the NeuroFly repository <span aria-hidden="true">↗</span></a></section>
+    <section class="context-note" aria-label="Implementation and demonstration data"><h2>Implementation and data</h2><p>Large image volumes remain in storage; local image windows and the neuron graph define each review task. The public NeuroFly repository contains the tools for creating initial reconstruction data, one component of the data-engine workflow. This browser demo uses saved annotations from a 600 MB public sample with display-normalized 32 × 32 × 32 voxel image windows.</p><p class="demo-note">Demo reviews are local and unverified. Model inference and training are not run in the browser.</p><a href="https://github.com/beanli161514/neurofly" target="_blank" rel="noreferrer">NeuroFly source code <span aria-hidden="true">↗</span></a></section>
   </main>
 
-  <footer><span>Rubin Zhao <span class="footer-divider">/</span> 3D perception &amp; data systems</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">NeuroFly dataset ↗</a><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a><a href="./DATA_FORMAT.md">Data &amp; provenance ↗</a><a href="/">Ear reconstruction ↗</a></div></footer>
+  <footer><span>Rubin Zhao · NeuroFly research demo</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">NeuroFly dataset ↗</a><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a><a href="./DATA_FORMAT.md">Data &amp; provenance ↗</a><a href="/">Ear reconstruction ↗</a></div></footer>
   <noscript><p class="noscript">Enable JavaScript to explore the 3D volume and review workflow.</p></noscript>
 </body>
 </html>
