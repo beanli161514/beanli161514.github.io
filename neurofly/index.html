@@ -88,17 +88,8 @@
           <article class="rollout-panel" aria-labelledby="rollout-title">
             <div class="training-panel-heading"><h3 id="rollout-title">Annotated fiber replay</h3><span>96³ voxels · 1 µm/voxel</span></div>
             <div class="training-volume-stage"><div id="training-volume" aria-label="Interactive microscopy volume with a progressively revealed annotated fiber"></div><div id="training-volume-status" class="training-volume-status" role="status">Loading the 3D annotation replay…</div><span class="orbit-hint">Drag to orbit · scroll to zoom</span></div>
-            <div class="training-transport"><button id="training-play" type="button" disabled>Play</button><button id="training-restart" class="text-button" type="button" disabled>Restart</button><label class="training-timeline-label" for="training-timeline"><span>Annotation step</span><input id="training-timeline" type="range" min="1" max="1" value="1" step="1" disabled aria-label="Fiber reveal timeline"></label><output id="training-step" for="training-timeline" aria-live="off">1 / —</output></div>
+            <div class="training-transport"><button id="training-play" type="button" disabled>Play</button><button id="training-restart" class="text-button" type="button" disabled>Restart</button><label class="training-timeline-label" for="training-timeline"><span>Annotation step</span><input id="training-timeline" type="range" min="1" max="1" value="1" step="1" disabled aria-label="Fiber reveal timeline"></label><output id="training-step" for="training-timeline" aria-live="off">1 / — steps</output></div>
             <p class="rollout-caption">The original annotation nodes and edges are revealed in order over the microscopy volume.</p>
-          </article>
-
-          <article id="training-example" class="training-example" aria-live="polite" aria-atomic="true" aria-labelledby="training-example-title">
-            <div class="training-example-heading"><h3 id="training-example-title">Supervision from the current task</h3><a href="#task-workspace">Change local decision ↑</a></div>
-            <p id="training-task" class="training-task">Choose a decision above.</p>
-            <p id="training-input-summary" class="training-input-summary">Local image + trajectory history + task candidates</p>
-            <div class="training-label"><span>Action label</span><strong id="training-target">Awaiting a decision</strong></div>
-            <p id="training-target-detail" class="training-target-detail">The selected action will appear here with its task context.</p>
-            <p id="training-status" class="training-status">Pending review</p>
           </article>
         </div>
 

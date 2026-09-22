@@ -372,18 +372,6 @@ footer{margin-top:29px}
 .head-row.active,.head-row[aria-current=true]{border-color:#8eb8ce;background:#e2eff6;color:#2a6a8b}
 .head-row.active strong,.head-row[aria-current=true] strong{color:#387d9e}
 .training-learning-note{border-top:1px solid #d5e2ea;margin:0;padding:11px 18px;font-size:10px;line-height:1.75;color:#7691a2;background:#eaf2f6}
-.training-example{border:1px solid #cbdce6;border-radius:7px;padding:15px 17px;background:#f8fbfc;min-width:0}
-.training-example-heading{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px}
-.training-example-heading h3{margin:0;font-size:11px;font-weight:600;line-height:1.5;color:#3c647b}
-.training-example-heading a{font-size:9px;line-height:1.6;color:#5183a0;text-align:right;white-space:nowrap}
-.training-task{font-size:11px;color:#5c7c91;margin:0 0 5px;line-height:1.6}
-.training-input-summary{font:9px/1.7 var(--mono);color:#8a9fac;margin:0 0 12px;overflow-wrap:anywhere}
-.training-label{display:flex;align-items:baseline;gap:13px;border-top:1px solid #dde8ee;padding-top:11px}
-.training-label>span{font-size:9px;color:#91a3af;white-space:nowrap}
-#training-target{font-size:13px;font-weight:600;line-height:1.6;color:#337493;overflow-wrap:anywhere;min-width:0}
-.training-target-detail{font-size:10px;line-height:1.75;color:#7892a3;margin:6px 0 0}
-.training-status{font:8px/1.6 var(--mono);color:#8ba0ad;margin:9px 0 0}
-.training-example[data-state=deferred] #training-target{color:#927ba8}
 .training-volume-stage{position:relative;min-height:555px;background:#071019;overflow:hidden}
 #training-volume{position:absolute;inset:0}
 #training-volume canvas{display:block;width:100%;height:100%;touch-action:none}
@@ -436,16 +424,11 @@ footer{margin-top:29px}
   .training-panel-heading{padding:12px 13px}
   .head-row{font-size:9px;padding:8px 7px}
   .head-row strong{font-size:8px}
-  .training-example{padding:14px}
-  .training-example-heading{display:block}
-  .training-example-heading a{display:inline-block;margin-top:5px;text-align:left}
 }
 @media(max-width:900px){
   .training-grid{grid-template-columns:1fr;gap:17px}
   .head-row{font-size:11px}
   .head-row strong{font-size:10px}
-  .training-example-heading{display:flex}
-  .training-example-heading a{margin-top:0}
 }
 @media(max-width:650px){
   .training-section{margin-top:28px;padding-top:22px}
@@ -458,12 +441,6 @@ footer{margin-top:29px}
   .rollout-caption{font-size:10px;padding:11px 13px}
   .head-row{font-size:10px;padding:8px 6px;gap:8px}
   .head-row strong{font-size:9px}
-  .training-example{padding:13px}
-  .training-example-heading{display:block;margin-bottom:11px}
-  .training-example-heading h3{font-size:11px}
-  .training-example-heading a{display:inline-block;margin-top:5px;font-size:9px}
-  .training-task{font-size:10px}
-  .training-input-summary{font-size:8px}
   .training-note{font-size:8px}
   .training-learning-note{font-size:9px;padding:10px 13px}
 }
