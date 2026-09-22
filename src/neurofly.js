@@ -201,7 +201,7 @@ async function boot(){
     overview.setData({...spec,nodes:[{id:'a',position:center}],edges:[],sourceId:'a',sourcePosition:center,candidates:[]},voxels);
     overview.setAnnotations(false);overview.setView('xy');
     overview.setScaleBar(200/(manifest.sourceVolume.voxelSizeUM[0]*spec.downsampleFactor[0]),'200 µm');
-    setRegion(tasks[index]);
+    setRegion(tasks[index]);overview.enableAutoRotation();
   }
   async function initBrain(){
     const spec=await(await responseFor('t154-brain.json')).json(),voxels=await loadVolume(spec);
@@ -226,6 +226,7 @@ async function boot(){
       });
       brain.setTraces(traces);
     }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · T154 fluorescence. Neuron annotations could not load.';console.error(error);}
+    brain.enableAutoRotation();
   }
   initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});
   initBrain().catch(error=>{$('brain-overview').textContent='Brain reference unavailable.';console.error(error);});

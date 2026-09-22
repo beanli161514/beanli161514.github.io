@@ -77,12 +77,7 @@ export class VolumeView {
     this.renderer.domElement.setAttribute('aria-label',`${container.getAttribute('aria-label')||'3D volume'}; drag to rotate, scroll to zoom`);
     container.append(this.renderer.domElement);
     this.camera=new THREE.OrthographicCamera(-64,64,64,-64,.1,2000);
-    this.controls=new OrbitControls(this.camera,this.renderer.domElement);
-    this.controls.enablePan=false;
-    this.controls.minZoom=.6;this.controls.maxZoom=5;
-    this.controls.addEventListener('change',()=>this.render());
-    this.controls.addEventListener('start',()=>{this.interacting=true;this.resize();});
-    this.controls.addEventListener('end',()=>{this.interacting=false;this.resize();});
+    this.createControls();
     this.volumeScene=new THREE.Scene();
     // Keep annotation geometry at display resolution while ray casting into a
     // smaller texture. Orbiting may reduce volume sampling, never node quality.
@@ -116,6 +111,59 @@ export class VolumeView {
     this.lineMaterials=[];
     this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(container);
     this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();container.dispatchEvent(new CustomEvent('volume-error',{detail:'The graphics context was lost. Reload to restore the 3D view.'}));});
+  }
+
+  createControls(){
+    this.controls?.dispose();
+    this.controls=new OrbitControls(this.camera,this.renderer.domElement);
+    this.orbitUp=this.camera.up.clone();
+    this.controls.enablePan=false;
+    this.controls.minZoom=.6;this.controls.maxZoom=5;
+    this.controls.addEventListener('change',()=>this.render());
+    this.controls.addEventListener('start',()=>{
+      this.interacting=true;this.autoRotation?.pause();this.resize();
+    });
+    this.controls.addEventListener('end',()=>{
+      this.interacting=false;this.autoRotation?.resume();this.resize();
+    });
+  }
+
+  enableAutoRotation(speed=.2){
+    if(this.autoRotation)return;
+    const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+    let visible=false,paused=false,frame=0,lastTime=0,resumeTimer;
+    const active=()=>visible&&!document.hidden&&!reducedMotion.matches&&!paused&&!this.interacting;
+    const tick=now=>{
+      if(!lastTime)lastTime=now;
+      const seconds=(now-lastTime)/1000;
+      // Slow motion needs only 30 updates per second. The existing change
+      // listener renders the volume and all annotations with the same camera.
+      if(seconds>=1/30){
+        this.controls.autoRotateSpeed=speed;this.controls.autoRotate=true;
+        this.controls.update(Math.min(seconds,.1));
+        this.controls.autoRotate=false;lastTime=now;
+      }
+      frame=requestAnimationFrame(tick);
+    };
+    const refresh=()=>{
+      if(active()&&!frame){
+        lastTime=0;this.autoAnimating=true;this.resize();
+        frame=requestAnimationFrame(tick);
+      }else if(!active()&&frame){
+        cancelAnimationFrame(frame);frame=0;lastTime=0;
+        this.autoAnimating=false;this.resize();
+      }
+    };
+    this.autoRotation={
+      pause:()=>{clearTimeout(resumeTimer);paused=true;refresh();},
+      resume:()=>{clearTimeout(resumeTimer);resumeTimer=setTimeout(()=>{paused=false;refresh();},5000);},
+    };
+    this.visibilityObserver=new IntersectionObserver(entries=>{
+      visible=entries[0].isIntersecting;refresh();
+    },{threshold:0});
+    this.visibilityObserver.observe(this.container);
+    document.addEventListener('visibilitychange',refresh);
+    reducedMotion.addEventListener('change',refresh);
   }
 
   setData(task,voxels) {
@@ -216,12 +264,17 @@ export class VolumeView {
 
   setView(mode='oblique') {
     if(!this.task)return;
+    this.autoRotation?.pause();
     const size=new THREE.Vector3(...this.task.shape),center=size.clone().addScalar(-1).multiplyScalar(.5);
     const directions={xy:[0,0,1],xz:[0,-1,0],yz:[1,0,0],oblique:[.5,-.65,1.25]};
     this.camera.up.set(0,mode==='xy'?1:0,mode==='xy'?0:1);
     this.camera.position.copy(center).add(new THREE.Vector3(...directions[mode]).normalize().multiplyScalar(size.length()*2));
+    // OrbitControls captures camera.up at construction, so rebuild its orbit
+    // frame when switching between Y-up (XY) and Z-up views.
+    if(!this.orbitUp.equals(this.camera.up))this.createControls();
     this.controls.target.copy(center);this.camera.zoom=1;
-    this.camera.lookAt(center);this.controls.update();this.resize();
+    this.camera.lookAt(center);this.controls.update(0);this.resize();
+    this.autoRotation?.resume();
   }
 
   setContrast(value){this.material.uniforms.uContrast.value=value;this.render();}
@@ -270,7 +323,8 @@ export class VolumeView {
 
   resize() {
     const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;
-    const volumeRatio=Math.min(1,1000/w)*(this.interacting?.75:1);
+    const moving=this.interacting||this.autoAnimating;
+    const volumeRatio=Math.min(1,1000/w)*(moving?.75:1);
     this.volumeTarget.setSize(Math.max(1,Math.round(w*volumeRatio)),Math.max(1,Math.round(h*volumeRatio)));
     this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.setSize(w,h,false);
     const extent=this.task?Math.max(...this.task.shape)*.66:64;
@@ -280,7 +334,7 @@ export class VolumeView {
     this.lineMaterials.forEach(m=>m.resolution.set(w,h));
     this.traceMaterials.forEach(m=>m.resolution.set(w,h));
     this.region?.material.resolution.set(w,h);
-    this.material.uniforms.uStep.value=this.interacting?.7:.35;
+    this.material.uniforms.uStep.value=moving?.7:.35;
     this.render();
   }
 
