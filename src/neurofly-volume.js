@@ -67,6 +67,17 @@ function disposeGroup(group) {
   group.clear();
 }
 
+function replacePointLabels(view,entries) {
+  view.labels.forEach(label=>label.remove());
+  view.labelEntries=entries.map(entry=>({...entry,position:[...entry.position]}));
+  view.labels=view.labelEntries.map(entry=>{
+    const label=document.createElement('span');
+    label.className='volume-point-label';label.textContent=entry.label;label.hidden=true;
+    if(entry.color)label.style.borderColor=entry.color;
+    view.container.append(label);return label;
+  });
+}
+
 export class VolumeView {
   constructor(container) {
     this.container=container;
@@ -214,8 +225,13 @@ export class VolumeView {
   }
 
   setGraph(record) {
+    if(this.fiberContext)this.setFiberContext(null);
+    if(this.fiber||this.fiberSequence){
+      const source=this.task?.nodes.find(node=>node.id===this.task.sourceId);
+      replacePointLabels(this,source?[{label:'A',position:source.position},...(this.task.candidates||[])]:[]);
+    }
     this.record=record;
-    this.fiber=null;
+    this.fiber=null;this.fiberSequence=null;
     disposeGroup(this.annotations);this.lineMaterials=[];
     if(!this.task)return;
     const t=this.task,candidates=t.candidates||[];
@@ -266,9 +282,11 @@ export class VolumeView {
   /** Keep one GPU copy of a measured fiber; reveal only its ordered prefix. */
   setFiberPath(pathXYZ) {
     if(!Array.isArray(pathXYZ)||pathXYZ.length<2||pathXYZ.some(p=>p.length!==3||!p.every(Number.isFinite)))throw new Error('A fiber needs at least two finite XYZ positions.');
+    if(this.fiberContext)this.setFiberContext(null);
     disposeGroup(this.annotations);this.lineMaterials=[];
     this.labels.forEach(label=>label.remove());this.labels=[];this.labelEntries=[];
     this.annotations.visible=true;
+    this.fiberSequence=null;
     const positions=pathXYZ.map(p=>[...p]);
     const points=this.makePoints(positions.flat(),'#38cddd',.64);
     const lines=this.makeLine(positions.slice(1).flatMap((p,i)=>[...positions[i],...p]),'#38cddd',2);
@@ -291,6 +309,113 @@ export class VolumeView {
     this.render();
   }
 
+  /** Replay explicit fragment states while retaining every measured position. */
+  setFiberSequence(pathXYZ) {
+    if(!Array.isArray(pathXYZ)||pathXYZ.length<2||pathXYZ.some(p=>!Array.isArray(p)||p.length!==3||!p.every(Number.isFinite)))throw new Error('A fiber sequence needs at least two finite XYZ positions.');
+    if(this.fiberContext)this.setFiberContext(null);
+    disposeGroup(this.annotations);this.lineMaterials=[];
+    replacePointLabels(this,[]);this.annotations.visible=true;
+    this.fiber=null;this.record=null;
+    this.fiberSequence={positions:pathXYZ.map(position=>[...position]),state:null};
+    this.render();
+  }
+
+  /** Static surrounding annotations; supplied edges may cross the crop boundary. */
+  setFiberContext(context) {
+    if(!context){
+      if(this.fiberContext)disposeGroup(this.fiberContext);
+      this.fiberContextLineMaterial=null;this.render();return;
+    }
+    if(!this.task)throw new Error('Load a volume before its fiber context.');
+    if(!Array.isArray(context.nodes)||context.nodes.some(node=>!Array.isArray(node.position)||node.position.length!==3||!node.position.every(Number.isFinite))
+      ||!Array.isArray(context.edges)||context.edges.some(edge=>!Array.isArray(edge)||edge.length!==2))throw new Error('Invalid fiber context geometry.');
+    const nodes=new Map(context.nodes.map(node=>[node.id,node.position]));
+    if(nodes.size!==context.nodes.length||context.edges.some(edge=>edge.some(id=>!nodes.has(id))))throw new Error('Fiber context edges must reference unique supplied nodes.');
+    if(!this.fiberContext){this.fiberContext=new THREE.Group();this.graphScene.add(this.fiberContext);}
+    disposeGroup(this.fiberContext);this.fiberContextLineMaterial=null;
+    this.fiberContext.visible=this.annotations.visible;
+    const bounds=this.task.shape.flatMap((size,axis)=>{
+      const normal=new THREE.Vector3().setComponent(axis,1);
+      return [new THREE.Plane(normal,.5),new THREE.Plane(normal.clone().negate(),size-.5)];
+    });
+    const clippingPlanes=[...this.clipPlanes,...bounds],color='#718496';
+    if(context.edges.length){
+      const geometry=new LineSegmentsGeometry();
+      geometry.setPositions(context.edges.flatMap(([a,b])=>[...nodes.get(a),...nodes.get(b)]));
+      const material=new LineMaterial({color,linewidth:1.2,transparent:true,opacity:.65,depthTest:true,depthWrite:false,clippingPlanes});
+      material.resolution.set(this.container.clientWidth,this.container.clientHeight);
+      const lines=new LineSegments2(geometry,material);lines.frustumCulled=false;
+      this.fiberContext.add(lines);this.fiberContextLineMaterial=material;
+    }
+    if(context.nodes.length){
+      const geometry=new THREE.SphereGeometry(.30,24,16);
+      const material=new THREE.MeshPhongMaterial({color,specular:0x555555,shininess:25,
+        transparent:true,opacity:.7,depthTest:true,depthWrite:false,clippingPlanes});
+      const points=new THREE.InstancedMesh(geometry,material,context.nodes.length),matrix=new THREE.Matrix4();
+      context.nodes.forEach((node,index)=>points.setMatrixAt(index,matrix.makeTranslation(...node.position)));
+      points.instanceMatrix.needsUpdate=true;points.frustumCulled=false;this.fiberContext.add(points);
+    }
+    this.render();
+  }
+
+  setFiberState(state) {
+    if(!this.fiberSequence)return;
+    const positions=this.fiberSequence.positions;
+    const validIndex=index=>Number.isInteger(index)&&index>=0&&index<positions.length;
+    const validEdge=edge=>Array.isArray(edge)&&edge.length===2&&edge.every(validIndex)&&edge[0]!==edge[1];
+    if(!state||!Array.isArray(state.visibleNodeIndices)||!state.visibleNodeIndices.every(validIndex)
+      ||!Array.isArray(state.visibleEdges)||!state.visibleEdges.every(validEdge)
+      ||!Number.isInteger(state.connectedThrough)||state.connectedThrough< -1||state.connectedThrough>=positions.length
+      ||(state.tipIndex!=null&&!validIndex(state.tipIndex))
+      ||(state.activeEdge!=null&&!validEdge(state.activeEdge))
+      ||!Array.isArray(state.candidates)||state.candidates.some(candidate=>!validIndex(candidate.index)||typeof candidate.label!=='string'))throw new Error('Invalid fiber sequence state.');
+    const visible=new Set(state.visibleNodeIndices);
+    if(state.visibleEdges.some(edge=>edge.some(index=>!visible.has(index))))throw new Error('Visible fiber edges require visible endpoints.');
+    if(state.tipIndex!=null&&!visible.has(state.tipIndex))throw new Error('The fiber tip must be visible.');
+    // Rebuild these tiny buffers on a step change, disposing the previous GPU
+    // objects. Scrubbing therefore has no dependence on earlier replay states.
+    disposeGroup(this.annotations);this.lineMaterials=[];
+    const connected=index=>index<=state.connectedThrough;
+    const linePositions=edges=>edges.flatMap(([a,b])=>[...positions[a],...positions[b]]);
+    const integratedEdges=state.visibleEdges.filter(edge=>edge.every(connected));
+    const disconnectedEdges=state.visibleEdges.filter(edge=>!edge.every(connected));
+    const integratedNodes=[...visible].filter(connected);
+    const disconnectedNodes=[...visible].filter(index=>!connected(index));
+    this.makeLine(linePositions(disconnectedEdges),'#9993b4',1.9);
+    this.makePoints(disconnectedNodes.flatMap(index=>positions[index]),'#9993b4',.6);
+    this.makeLine(linePositions(integratedEdges),'#38cddd',2.2);
+    this.makePoints(integratedNodes.flatMap(index=>positions[index]),'#38cddd',.64);
+    const labels=[];
+    if(state.activeEdge){
+      const [source,target]=state.activeEdge;
+      const accepted=state.visibleEdges.some(([a,b])=>(a===source&&b===target)||(a===target&&b===source));
+      const color={'fragment-connection':'#50e7a1','endpoint-selection':'#ffcd62','point-proposal':'#38cddd'}[state.taskType]||(accepted?'#50e7a1':'#ffcd62');
+      this.makeLine(linePositions([state.activeEdge]),color,3.4,1,!accepted).renderOrder=2;
+      this.makePoints(positions[source],'#38cddd',.83);
+      this.makePoints(positions[target],color,.83);
+      labels.push({label:'A',position:positions[source],color:'#38cddd'});
+      const selected=state.candidates.find(candidate=>candidate.index===target);
+      labels.push({label:selected?.label||'B',position:positions[target],color});
+      for(const candidate of state.candidates){
+        if(candidate.index===target)continue;
+        const candidateColor='#c0a3f6';
+        this.makeLine(linePositions([[source,candidate.index]]),candidateColor,2,1,true).renderOrder=1;
+        this.makePoints(positions[candidate.index],candidateColor,.76);
+        labels.push({label:candidate.label,position:positions[candidate.index],color:candidateColor});
+      }
+    }
+    // A successful join adopts an already visible fragment. Its new tip may
+    // lie far beyond the highlighted bridge; never move A/B to that endpoint.
+    if(state.tipIndex!=null&&!state.activeEdge?.includes(state.tipIndex)&&!state.candidates.some(candidate=>candidate.index===state.tipIndex)){
+      this.makePoints(positions[state.tipIndex],'#ffcd62',.86);
+    }
+    replacePointLabels(this,labels);
+    this.fiberSequence.state={...state,visibleNodeIndices:[...state.visibleNodeIndices],
+      visibleEdges:state.visibleEdges.map(edge=>[...edge]),activeEdge:state.activeEdge?[...state.activeEdge]:null,
+      candidates:state.candidates.map(candidate=>({...candidate}))};
+    this.render();
+  }
+
   setView(mode='oblique') {
     if(!this.task)return;
     this.autoRotation?.pause();
@@ -308,7 +433,7 @@ export class VolumeView {
 
   setContrast(value){this.material.uniforms.uContrast.value=value;this.render();}
   setDepth(value){this.material.uniforms.uDepth.value=value;this.render();}
-  setAnnotations(visible){this.annotations.visible=visible;this.render();}
+  setAnnotations(visible){this.annotations.visible=visible;if(this.fiberContext)this.fiberContext.visible=visible;this.render();}
 
   setTraces(traces){
     disposeGroup(this.traces);this.traceObjects.clear();this.traceMaterials=[];
@@ -361,6 +486,7 @@ export class VolumeView {
     this.camera.top=extent;this.camera.bottom=-extent;
     this.camera.updateProjectionMatrix();
     this.lineMaterials.forEach(m=>m.resolution.set(w,h));
+    this.fiberContextLineMaterial?.resolution.set(w,h);
     this.traceMaterials.forEach(m=>m.resolution.set(w,h));
     this.region?.material.resolution.set(w,h);
     this.material.uniforms.uStep.value=moving?.7:.35;

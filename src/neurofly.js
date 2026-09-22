@@ -2,7 +2,7 @@ import {gunzipSync} from 'fflate';
 import {VolumeView,CANDIDATE_COLORS} from './neurofly-volume.js';
 import {makeReview,summarizeReviews,graphEdgesAfterReview} from './neurofly-review.js';
 import {transformXYZ,physicalBox} from './neurofly-scale.js';
-import {highlightTrainingTask,initTrainingRollout} from './neurofly-training-view.js';
+import {initTrainingRollout} from './neurofly-training-view.js';
 
 const $=id=>document.getElementById(id);
 const dataRoot=new URL('./data/',window.location.href);
@@ -148,7 +148,6 @@ async function boot(){
     document.documentElement.dataset.task=task.id;
     document.documentElement.dataset.taskType=task.taskType;
     document.documentElement.dataset.decision=record?.decision||'pending';
-    highlightTrainingTask(task);
   }
 
   async function selectTask(nextIndex){

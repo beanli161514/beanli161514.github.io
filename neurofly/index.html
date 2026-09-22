@@ -82,24 +82,26 @@
 
     <section id="training" class="training-section" aria-labelledby="training-title">
       <div class="section-heading"><h2 id="training-title">From reviewed decisions to automated tracing</h2></div>
-      <p class="training-intro">A reviewed local decision supplies a structured action label for its image and trajectory context.</p>
+      <p class="training-intro">The structured action interface uses a local 32³ image and trajectory history to extend a fiber, select an endpoint, or connect fragments, then repeats from the updated graph.</p>
       <div class="training-grid">
         <div class="training-model-column">
           <article class="rollout-panel" aria-labelledby="rollout-title">
-            <div class="training-panel-heading"><h3 id="rollout-title">Annotated fiber replay</h3><span>96³ voxels · 1 µm/voxel</span></div>
-            <div class="training-volume-stage"><div id="training-volume" aria-label="Interactive microscopy volume with a progressively revealed annotated fiber"></div><div id="training-volume-status" class="training-volume-status" role="status">Loading the 3D annotation replay…</div><span class="orbit-hint">Drag to orbit · scroll to zoom</span></div>
-            <div class="training-transport"><button id="training-play" type="button" disabled>Play</button><button id="training-restart" class="text-button" type="button" disabled>Restart</button><label class="training-timeline-label" for="training-timeline"><span>Annotation step</span><input id="training-timeline" type="range" min="1" max="1" value="1" step="1" disabled aria-label="Fiber reveal timeline"></label><output id="training-step" for="training-timeline" aria-live="off">1 / — steps</output></div>
-            <p class="rollout-caption">The original annotation nodes and edges are revealed in order over the microscopy volume.</p>
+            <div class="training-panel-heading"><h3 id="rollout-title">Structured-action tracing</h3><span>96³ voxels · 1 µm/voxel</span></div>
+            <div class="training-transport"><button id="training-play" type="button" disabled>Play</button><button id="training-restart" class="text-button" type="button" disabled>Restart</button><label class="training-timeline-label" for="training-timeline"><span>Action step</span><input id="training-timeline" type="range" min="0" max="0" value="0" step="1" disabled aria-label="Structured tracing timeline"></label><output id="training-step" for="training-timeline" aria-live="off">0 / — steps</output></div>
+            <div class="training-action-bar"><div><strong id="training-action">Ready</strong><span id="training-action-detail">Play or select an action step.</span></div><span id="training-fragments">— fragments</span></div>
+            <div class="training-volume-stage"><div id="training-volume" aria-label="Interactive microscopy with fiber extension and fragment connection actions"></div><div id="training-volume-status" class="training-volume-status" role="status">Loading the tracing sequence…</div><span class="orbit-hint">Drag to orbit · scroll to zoom</span></div>
+            <p class="rollout-caption">An illustrative action sequence on a real microscopy volume.</p>
+            <div class="training-fiber-key" aria-label="Fiber colors"><span><i class="connected-fiber-key"></i>Connected fiber</span><span><i class="unconnected-fiber-key"></i>Unconnected fragments</span><span><i class="other-segments-key"></i>Other segments</span></div>
           </article>
         </div>
 
         <div class="training-model-column">
           <article class="model-interface" aria-labelledby="model-interface-title">
             <div class="training-panel-heading"><h3 id="model-interface-title">Model architecture</h3><span>Structured action interface</span></div>
-            <div class="structured-output"><h4>Structured action head <span>Conditioned on the local task and candidates</span></h4>
-                <div id="training-head-connection" class="head-row" data-head="fragment-connection"><span>Connect fragments</span><strong>Accept / Reject</strong></div>
-                <div id="training-head-endpoint" class="head-row" data-head="endpoint-selection"><span>Select an endpoint</span><strong>B / C / D</strong></div>
-                <div id="training-head-extension" class="head-row" data-head="point-proposal"><span>Extend or stop</span><strong>B / C / D / None</strong></div>
+            <div class="structured-output"><h4>Structured action head <span>Synchronized with the tracing step</span></h4>
+                <div id="training-head-connection" class="head-row" data-head="fragment-connection"><span>Connect fragments</span><strong class="head-options"><span class="head-option" data-head-option="Accept">Accept</span><span class="head-option" data-head-option="Reject">Reject</span></strong></div>
+                <div id="training-head-endpoint" class="head-row" data-head="endpoint-selection"><span>Select an endpoint</span><strong class="head-options"><span class="head-option" data-head-option="B">B</span><span class="head-option" data-head-option="C">C</span><span class="head-option" data-head-option="D">D</span></strong></div>
+                <div id="training-head-extension" class="head-row" data-head="point-proposal"><span>Extend or stop</span><strong class="head-options"><span class="head-option" data-head-option="B">B</span><span class="head-option" data-head-option="C">C</span><span class="head-option" data-head-option="D">D</span><span class="head-option" data-head-option="None">None</span></strong></div>
             </div>
             <svg id="training-model-diagram" class="slide-model-diagram" viewBox="0 0 760 830" role="img" aria-labelledby="model-svg-title model-svg-description">
               <title id="model-svg-title">Trajectory and image tokens in the two-way Transformer</title>
