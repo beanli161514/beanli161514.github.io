@@ -1,16 +1,40 @@
 import {gunzipSync} from 'fflate';
-import {VolumeView} from './neurofly-volume.js';
+import {VolumeView,CANDIDATE_COLORS} from './neurofly-volume.js';
 import {makeReview,summarizeReviews,createExport,graphEdgesAfterReview} from './neurofly-review.js';
 
 const $=id=>document.getElementById(id);
 const dataRoot=new URL('./data/',window.location.href);
 const formatBytes=n=>n>=1e6?`${(n/1e6).toFixed(2)} MB`:`${Math.round(n/1000)} KB`;
-const labels={accept:'Accepted',reject:'Rejected',uncertain:'Deferred'};
-const feedback={
-  accept:'Accepted: add the connection and retain a positive review label with its image context and reviewer attribution.',
-  reject:'Rejected: exclude the connection and retain a negative review label with its image context and reviewer attribution.',
-  uncertain:'Uncertain: leave the graph unchanged and flag the task for further review. No positive or negative label is assigned.',
-};
+const labels={accept:'Accepted',reject:'Rejected',select:'Candidate selected',none:'True ending',uncertain:'Deferred'};
+const typeNames={'fragment-connection':'Fragment connection','endpoint-selection':'Endpoint selection','point-proposal':'Point proposal'};
+
+function choicesFor(task){
+  if(task.taskType==='fragment-connection')return [
+    {decision:'accept',label:'Accept'}, {decision:'reject',label:'Reject'}, {decision:'uncertain',label:'Uncertain'},
+  ];
+  const choices=task.candidates.map(candidate=>({decision:'select',candidateId:candidate.id,label:`Select ${candidate.label}`}));
+  if(task.taskType==='point-proposal')choices.push({decision:'none',label:'None',detail:'Label A as a true ending'});
+  choices.push({decision:'uncertain',label:'Uncertain',detail:'Defer this task for further review'});
+  return choices;
+}
+
+function feedbackFor(task,record){
+  if(!record){
+    if(task.taskType==='point-proposal')return 'Choose a proposed point to extend A, or None to label A as a true ending. Use Uncertain to defer the decision.';
+    if(task.taskType==='endpoint-selection')return 'Select the endpoint that continues fragment A. Use Uncertain when the image evidence is insufficient.';
+    return 'Assess continuity between the two fragments in 3D. Use Uncertain when the image evidence is insufficient.';
+  }
+  if(record.decision==='none')return 'None selected: A is labeled as a true ending. No point or edge is added; the record retains a positive true-ending label.';
+  if(record.decision==='uncertain')return 'Uncertain: the graph is unchanged and the task is deferred. This does not label A as a true ending.';
+  if(record.decision==='reject')return 'Connection rejected: the fragments remain separate. A is not labeled as a true ending.';
+  if(record.decision==='select'){
+    const candidate=task.candidates.find(c=>c.id===record.selectedCandidateId);
+    return task.taskType==='point-proposal'
+      ?`Point ${candidate.label} selected: add this point and an edge from A. The selected proposal and its image context are retained in the review record.`
+      :`Endpoint ${candidate.label} selected: connect A to this fragment. Other candidates remain unselected; the record retains the full candidate set.`;
+  }
+  return 'Connection accepted: join the two fragments and retain the decision, image context, and reviewer attribution.';
+}
 
 async function responseFor(file){
   const response=await fetch(new URL(file,dataRoot));
@@ -19,7 +43,7 @@ async function responseFor(file){
 }
 
 async function boot(){
-  const manifest=await(await responseFor('manifest.json')).json();
+  const manifest=await(await responseFor('manifest.json?revision=three-task-types-32-v3')).json();
   const storageKey=`neurofly-reviews-${manifest.revision||manifest.schemaVersion}`;
   const tasks=manifest.tasks.map(task=>({...task,revision:manifest.revision,dataRevision:manifest.dataRevision}));
   const cache=new Map(),loadedFiles=new Map(),records=new Map(),undo=[];
@@ -29,15 +53,19 @@ async function boot(){
   catch(error){throw new Error('The 3D viewer needs WebGL 2. Please open this page in a browser with hardware graphics enabled.',{cause:error});}
   $('volume-view').addEventListener('volume-error',event=>{$('volume-status').hidden=false;$('volume-status').textContent=event.detail;});
 
-  // Recover only decisions for the current, versioned task set. Reconstruct the
-  // record from source metadata, rather than trusting stale browser geometry.
+  // Stored decisions are tied to this task revision; validate each row against
+  // its original candidate set before reconstructing a record from source data.
   try{
     const saved=JSON.parse(localStorage.getItem(storageKey)||'[]');
     if(Array.isArray(saved))for(const row of saved){
       const task=tasks.find(t=>t.id===row.taskId);
-      if(task&&['accept','reject','uncertain'].includes(row.decision))records.set(task.id,makeReview(task,row.decision,{timestamp:row.timestamp}));
+      if(!task)continue;
+      try{
+        graphEdgesAfterReview(task,row);
+        records.set(task.id,makeReview(task,row.decision,{candidateId:row.selectedCandidateId,reviewer:row.reviewer,timestamp:row.timestamp}));
+      }catch{ /* Ignore an invalid or stale row without discarding other reviews. */ }
     }
-  }catch{ /* Storage may be disabled; the demo still works for this visit. */ }
+  }catch{ /* Storage may be disabled; reviews still work for this visit. */ }
 
   function persist(){try{localStorage.setItem(storageKey,JSON.stringify([...records.values()]));}catch{}}
   function updateBytes(){
@@ -59,8 +87,43 @@ async function boot(){
       const factor=manifest.overview.downsampleFactor;
       overview.setRegion(task.origin.map((n,i)=>n/factor[i]),task.shape.map((n,i)=>n/factor[i]));
     }
-    const fraction=task.shape.reduce((a,b)=>a*b,1)/manifest.sourceVolume.voxelCount*100;
-    $('scale-caption').textContent=`${manifest.sourceVolume.shapeXYZ.join(' × ')} voxels · ${formatBytes(manifest.sourceVolume.uncompressedBytes)} source block. The highlighted ${task.shape.join(' × ')} window contains ${fraction.toFixed(2)}% of its voxels.`;
+    $('scale-caption').textContent=`${manifest.sourceVolume.shapeXYZ.join(' × ')} voxels · ${formatBytes(manifest.sourceVolume.uncompressedBytes)} source block. The highlighted ${task.shape.join(' × ')} window is centered on the source endpoint.`;
+  }
+
+  function renderChoices(task){
+    $('decision-actions').replaceChildren();
+    choicesFor(task).forEach((choice,i)=>{
+      const button=document.createElement('button');button.type='button';
+      button.className=`decision-button ${choice.decision}${choice.candidateId?' candidate-choice':''}`;
+      button.dataset.decision=choice.decision;button.dataset.candidateId=choice.candidateId||'';
+      button.id=choice.candidateId?`decision-candidate-${choice.candidateId}`:`decision-${choice.decision}`;
+      const text=document.createElement('span'),label=document.createElement('span');text.className='choice-content';label.className='choice-label';label.textContent=choice.label;text.append(label);
+      let detail=choice.detail;
+      if(choice.candidateId){
+        const candidate=task.candidates.find(c=>c.id===choice.candidateId),candidateIndex=task.candidates.indexOf(candidate);
+        button.style.setProperty('--candidate-color',CANDIDATE_COLORS[candidateIndex%CANDIDATE_COLORS.length]);
+        const swatch=document.createElement('i');swatch.className='choice-swatch';swatch.setAttribute('aria-hidden','true');button.append(swatch);
+        const distance=Math.hypot(...candidate.position.map((n,j)=>n-task.sourcePosition[j]));
+        detail=`${candidate.kind==='image-point'?'Proposed point':'Fragment endpoint'} · ${distance.toFixed(1)} voxels from A`;
+        button.onpointerenter=()=>{if(ready)view.setHighlight(candidate.id);};
+        button.onpointerleave=()=>{if(ready)view.setHighlight(null);};
+        button.onfocus=()=>{if(ready)view.setHighlight(candidate.id);};
+        button.onblur=()=>{if(ready)view.setHighlight(null);};
+      }
+      if(detail){const small=document.createElement('small');small.className='choice-detail';small.textContent=detail;text.append(small);}
+      const key=document.createElement('kbd');key.textContent=i+1;key.setAttribute('aria-hidden','true');
+      button.append(text,key);button.onclick=()=>review(choice.decision,choice.candidateId);
+      $('decision-actions').append(button);
+    });
+    const legend=$('candidate-legend');
+    if(legend){
+      legend.replaceChildren();
+      task.candidates.forEach((candidate,i)=>{
+        const item=document.createElement('span'),dot=document.createElement('i');
+        dot.style.background=CANDIDATE_COLORS[i%CANDIDATE_COLORS.length];
+        item.append(dot,document.createTextNode(`${candidate.label} · ${candidate.kind==='image-point'?'proposed point':'fragment endpoint'}`));legend.append(item);
+      });
+    }
   }
 
   function updateReview(){
@@ -69,6 +132,7 @@ async function boot(){
     $('positive-count').textContent=summary.accept;
     $('negative-count').textContent=summary.reject;
     $('uncertain-count').textContent=summary.uncertain;
+    $('terminal-count').textContent=summary.none;
     $('review-progress').textContent=`${summary.total} / ${tasks.length} tasks reviewed`;
     $('next-task').disabled=!ready;
     $('next-task').textContent=index===tasks.length-1?'First task':'Next task';
@@ -76,39 +140,43 @@ async function boot(){
     $('export-records').disabled=summary.total===0;
     $('reset-session').disabled=summary.total===0;
     for(const id of ['view-xy','view-xz','view-yz','view-reset','contrast','depth','annotations-toggle'])$(id).disabled=!ready;
-    for(const decision of ['accept','reject','uncertain']){
-      const button=$(`decision-${decision}`);button.disabled=!ready;
-      button.setAttribute('aria-pressed',String(record?.decision===decision));
-      button.classList.toggle('selected',record?.decision===decision);
+    for(const button of $('decision-actions').children){
+      const selected=record?.decision===button.dataset.decision&&(!button.dataset.candidateId||record.selectedCandidateId===button.dataset.candidateId);
+      button.disabled=!ready;button.setAttribute('aria-pressed',String(Boolean(selected)));button.classList.toggle('selected',Boolean(selected));
     }
     [...$('task-tabs').children].forEach((button,i)=>{
       button.classList.toggle('active',i===index);button.setAttribute('aria-pressed',String(i===index));
       const row=records.get(tasks[i].id);button.dataset.reviewed=String(Boolean(row));
       button.title=row?`${tasks[i].title} · ${labels[row.decision]}`:tasks[i].title;
     });
-    $('decision-feedback').textContent=record?feedback[record.decision]:'Assess image continuity and trajectory in 3D. Select Uncertain if the evidence is insufficient.';
+    $('decision-feedback').textContent=feedbackFor(task,record);
     $('decision-feedback').dataset.decision=record?.decision||'';
     const edgeCount=graphEdgesAfterReview(task,record).length;
-    $('graph-status').textContent=record?.decision==='accept'?`Connection accepted · ${edgeCount} local edges`:record?.decision==='reject'?`Connection rejected · ${edgeCount} local edges`:record?.decision==='uncertain'?`Graph unchanged · task flagged for review · ${edgeCount} local edges`:`${edgeCount} fragment edges · candidate connection under review`;
+    $('graph-status').textContent=record?.decision==='none'?`A labeled as a true ending · ${edgeCount} local edges`
+      :record?.decision==='accept'||record?.decision==='select'?`Connection added · ${edgeCount} local edges`
+      :record?.decision==='reject'?`Connection rejected · ${edgeCount} local edges`
+      :record?.decision==='uncertain'?`Graph unchanged · task deferred · ${edgeCount} local edges`
+      :`${edgeCount} fragment edges · ${task.candidates.length} candidate${task.candidates.length===1?'':'s'} under review`;
     $('record-json').textContent=JSON.stringify(record?{
       task:record.taskId,
-      source:record.source.volume.filename,
-      crop_origin_xyz:record.source.origin,
-      candidate:[record.proposedEdge.sourceId,record.proposedEdge.targetId],
+      task_type:record.taskType,
+      source_endpoint:task.sourceId,
       decision:record.decision,
+      selected_candidate:record.selectedCandidateId??null,
+      endpoint_status:record.endpointStatus??null,
+      training_target:record.trainingTarget,
       reviewer:record.reviewer,
       reviewed_at:record.timestamp,
       status:record.status,
-      candidate_label:record.trainingLabel,
       validation:record.validation,
-    }:{task:task.id,candidate:[task.sourceId,task.targetId],decision:null,status:'awaiting_review'},null,2);
+      candidate_set:task.candidates.map(c=>({id:c.id,kind:c.kind,node:c.nodeId,position:c.position})),
+    }:{task:task.id,task_type:task.taskType,source_endpoint:task.sourceId,candidates:task.candidates.map(c=>c.id),decision:null,status:'awaiting_review'},null,2);
     for(const name of ['review','graph','data']){
       const el=$(`pipeline-${name}`);el.classList.toggle('active',name==='review'&&!record||name==='graph'&&record?.decision==='uncertain'||name==='data'&&record&&record.decision!=='uncertain');el.classList.toggle('complete',Boolean(record)&&name==='review');
     }
-    const reference=$('reference-note');
-    if(reference){reference.hidden=!record;reference.textContent=record?`Source context: ${task.referenceNote}`:'';}
-    if(ready)view.setGraph(record);
+    if(ready){view.setHighlight(null);view.setGraph(record);}
     document.documentElement.dataset.task=task.id;
+    document.documentElement.dataset.taskType=task.taskType;
     document.documentElement.dataset.decision=record?.decision||'pending';
   }
 
@@ -116,25 +184,26 @@ async function boot(){
     const currentVersion=++version;index=nextIndex;ready=false;const task=tasks[index];
     $('volume-status').hidden=false;$('volume-status').textContent=`Loading ${formatBytes(task.compressedBytes)} of local image context…`;
     $('task-number').textContent=`TASK ${String(index+1).padStart(2,'0')} / ${String(tasks.length).padStart(2,'0')}`;
+    $('task-kind').textContent=typeNames[task.taskType];
     $('task-title').textContent=task.prompt;
     $('task-context').textContent=task.context;
     $('task-source').textContent=`${task.sourceVolume.species} · ${task.sourceVolume.imaging} · ${task.shape[0]}³ voxels`;
     $('task-bytes').textContent=`${formatBytes(task.compressedBytes)} compressed crop`;
     $('contrast').value=1;$('depth').value=1;
-    updateReview();setRegion(task);
+    renderChoices(task);updateReview();setRegion(task);
     try{
       const data=await loadVolume(task);if(currentVersion!==version)return;
       view.setData(task,data);view.setContrast(1);view.setDepth(1);view.setAnnotations($('annotations-toggle').checked);
       ready=true;$('volume-status').hidden=true;setActiveView('oblique');updateReview();
-    }catch(error){if(currentVersion===version){$('volume-status').textContent='This volume could not load. Select the case again to retry.';console.error(error);}}
+    }catch(error){if(currentVersion===version){$('volume-status').textContent='This volume could not load. Select the task again to retry.';console.error(error);}}
   }
 
-  function review(decision){
+  function review(decision,candidateId){
     if(!ready)return;
-    const task=tasks[index];undo.push({id:task.id,previous:records.get(task.id)||null});
-    records.set(task.id,makeReview(task,decision));persist();updateReview();
+    const task=tasks[index],record=makeReview(task,decision,{candidateId});
+    undo.push({id:task.id,previous:records.get(task.id)||null});
+    records.set(task.id,record);persist();updateReview();
   }
-  for(const decision of ['accept','reject','uncertain'])$(`decision-${decision}`).onclick=()=>review(decision);
   $('next-task').onclick=()=>selectTask((index+1)%tasks.length);
   $('undo-decision').onclick=()=>{
     const last=undo.pop();if(!last)return;
@@ -156,25 +225,24 @@ async function boot(){
   $('annotations-toggle').onchange=e=>view.setAnnotations(e.target.checked);
   window.addEventListener('keydown',event=>{
     if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName))return;
-    const decision={'1':'accept','2':'reject','3':'uncertain'}[event.key];if(decision){event.preventDefault();review(decision);}
+    const choice=choicesFor(tasks[index])[Number(event.key)-1];
+    if(/^[1-9]$/.test(event.key)&&choice){event.preventDefault();review(choice.decision,choice.candidateId);}
   });
   tasks.forEach((task,i)=>{const button=document.createElement('button');button.type='button';button.textContent=task.title;button.onclick=()=>selectTask(i);$('task-tabs').append(button);});
 
-  // The overview is a max-pooled version of the *same* real source block.
-  // It loads independently so a usable review never waits for a panorama.
   async function initOverview(){
     const spec=manifest.overview,voxels=await loadVolume(spec);
     overview=new VolumeView($('scale-overview'));
     const center=spec.shape.map(n=>(n-1)/2);
-    overview.setData({...spec,nodes:[{id:'a',position:center},{id:'b',position:center}],edges:[],sourceId:'a',targetId:'b'},voxels);
+    overview.setData({...spec,nodes:[{id:'a',position:center}],edges:[],sourceId:'a',sourcePosition:center,candidates:[]},voxels);
     overview.setAnnotations(false);overview.setView('xy');setRegion(tasks[index]);
   }
-  initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local cases remain interactive.';console.error(error);});
+  initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});
   await selectTask(0);
 }
 
 boot().catch(error=>{
   $('volume-status').hidden=false;$('volume-status').textContent=error.message;
-  for(const id of ['decision-accept','decision-reject','decision-uncertain','next-task'])$(id).disabled=true;
+  for(const button of document.querySelectorAll('#decision-actions button, #next-task'))button.disabled=true;
   console.error(error);
 });

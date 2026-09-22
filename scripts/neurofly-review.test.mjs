@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {makeReview, summarizeReviews, createExport, graphEdgesAfterReview} from '../src/neurofly-review.js';
+import {makeReview, summarizeReviews, createExport, graphEdgesAfterReview, graphNodesAfterReview} from '../src/neurofly-review.js';
 
 const task = {
   id: 'gap-01',
@@ -43,9 +43,9 @@ test('uncertainty is deferred and excluded from candidate supervision, while its
   const records = ['accept', 'reject', 'uncertain'].map(decision => makeReview(task, decision, metadata));
   assert.equal(records[2].trainingLabel, null);
   assert.equal(records[2].status, 'deferred');
-  assert.deepEqual(summarizeReviews(records), {total: 3, accept: 1, reject: 1, uncertain: 1});
+  assert.deepEqual(summarizeReviews(records), {total: 3, accept: 1, reject: 1, uncertain: 1, none: 0});
   const exported = createExport(records);
-  assert.equal(exported.version, 1);
+  assert.equal(exported.version, 3);
   assert.match(exported.purpose, /unverified/);
   assert.equal(exported.reviews.length, 3);
   assert.deepEqual(exported.supervisedCandidates.map(record => record.trainingLabel), [1, 0]);
@@ -129,4 +129,126 @@ test('old reviews cannot silently apply to a new candidate or data revision unde
   assert.equal(graphEdgesAfterReview(currentTask, currentReview).length, task.edges.length + 1);
   assert.throws(() => graphEdgesAfterReview({...currentTask, dataRevision: 3}, currentReview), /different dataRevision/);
   assert.deepEqual(graphEdgesAfterReview(currentTask, makeReview(currentTask, 'uncertain', metadata)), currentTask.edges);
+});
+
+const selectionTask = {
+  ...structuredClone(task), id: 'choose-endpoint', taskType: 'endpoint-selection', dataRevision: 3,
+  nodes: [...structuredClone(task.nodes), {id: 'd', position: [25, 35, 40]}],
+  candidates: [
+    {id: 'b', label: 'B', nodeId: 'b', position: [20, 30, 40], kind: 'fragment-endpoint', metrics: {distance: 17.3}},
+    {id: 'd', label: 'D', nodeId: 'd', position: [25, 35, 40], kind: 'fragment-endpoint', metrics: {distance: 23.4}},
+  ],
+};
+const pointTask = {
+  ...structuredClone(task), id: 'propose-point', taskType: 'point-proposal', dataRevision: 3,
+  nodes: structuredClone(task.nodes.filter(node => node.id !== 'b')),
+  generation: {method: 'direction-and-local-maxima', settings: {radius: 8}},
+  candidateGeneration: {nearbyFragmentEndpoints: [], method: 'direction-and-local-maxima'},
+  replayState: {basis: 'simulated-pre-review', savedSourceChecked: 1, sourceChecked: 0},
+  candidates: [
+    {id: 'p1', label: 'B', nodeId: null, position: [12, 23, 34], kind: 'image-point', metrics: {intensity: 120}},
+    {id: 'p2', label: 'C', nodeId: null, position: [13, 24, 35], kind: 'image-point', metrics: {intensity: 140}},
+  ],
+};
+
+test('binary fragment reviews retain connection labels and their sole candidate', () => {
+  const binary = {...selectionTask, taskType: 'fragment-connection', candidates: [selectionTask.candidates[0]]};
+  const accepted = makeReview(binary, 'accept', metadata), rejected = makeReview(binary, 'reject', metadata);
+  assert.deepEqual(accepted.trainingTarget, {type: 'connection', label: 1});
+  assert.deepEqual(rejected.trainingTarget, {type: 'connection', label: 0});
+  assert.equal(accepted.selectedCandidateId, 'b');
+  assert.equal(rejected.selectedCandidateId, 'b');
+  assert.equal(accepted.trainingLabel, 1);
+  assert.equal(rejected.trainingLabel, 0);
+  assert.deepEqual(graphNodesAfterReview(binary, accepted), binary.nodes);
+  assert.deepEqual(graphEdgesAfterReview(binary, rejected), binary.edges);
+});
+
+test('endpoint selection connects only the chosen fragment and retains the full candidate set', () => {
+  const before = structuredClone(selectionTask);
+  const record = makeReview(selectionTask, 'select', {...metadata, candidateId: 'd'});
+  assert.deepEqual(record.trainingTarget, {type: 'candidate-selection', candidateId: 'd'});
+  assert.equal('trainingLabel' in record, false);
+  assert.equal(record.selectedCandidateId, 'd');
+  assert.deepEqual(record.proposedEdge, {sourceId: 'a', targetId: 'd'});
+  assert.deepEqual(graphEdgesAfterReview(selectionTask, record), [['a', 'c'], ['a', 'd']]);
+  assert.deepEqual(graphNodesAfterReview(selectionTask, record), selectionTask.nodes);
+  assert.deepEqual(record.candidates, selectionTask.candidates);
+  record.candidates[0].metrics.distance = -1;
+  record.graphContext.nodes[0].position[0] = -1;
+  assert.deepEqual(selectionTask, before);
+});
+
+test('selecting an image proposal materializes one deterministic node and edge, without mutating the source graph', () => {
+  const before = structuredClone(pointTask);
+  const record = makeReview(pointTask, 'select', {...metadata, candidateId: 'p2'});
+  assert.deepEqual(record.proposedEdge, {sourceId: 'a', targetId: 'proposal:propose-point:p2'});
+  assert.deepEqual(graphNodesAfterReview(pointTask, null), pointTask.nodes);
+  const nodes = graphNodesAfterReview(pointTask, record), edges = graphEdgesAfterReview(pointTask, record);
+  assert.equal(nodes.length, pointTask.nodes.length + 1);
+  assert.deepEqual(nodes.at(-1).position, [13, 24, 35]);
+  assert.equal(nodes.at(-1).id, 'proposal:propose-point:p2');
+  assert.equal(nodes.at(-1).validation, 'unverified-demo-review');
+  assert.deepEqual(edges, [['a', 'c'], ['a', 'proposal:propose-point:p2']]);
+  assert.deepEqual(graphNodesAfterReview({...pointTask, nodes}, record), nodes);
+  assert.deepEqual(graphEdgesAfterReview({...pointTask, edges}, record), edges);
+  assert.deepEqual(pointTask, before);
+});
+
+test('None is a positive true-ending annotation, distinct from rejection and uncertainty', () => {
+  const record = makeReview(pointTask, 'none', metadata);
+  assert.equal(record.endpointStatus, 'true-ending');
+  assert.equal(record.status, 'reviewed');
+  assert.equal(record.trainingLabel, 1);
+  assert.deepEqual(record.trainingTarget, {type: 'endpoint-status', value: 'true-ending', label: 1});
+  assert.equal(record.selectedCandidateId, null);
+  assert.equal(record.proposedEdge, null);
+  assert.equal(record.targetPosition, null);
+  assert.deepEqual(graphEdgesAfterReview(pointTask, record), pointTask.edges);
+  const nodes = graphNodesAfterReview(pointTask, record);
+  assert.equal(nodes.length, pointTask.nodes.length);
+  assert.equal(nodes.find(node => node.id === pointTask.sourceId).endpointStatus, 'true-ending');
+  assert.equal(pointTask.nodes.find(node => node.id === pointTask.sourceId).endpointStatus, undefined);
+  assert.equal(createExport([record]).supervisedCandidates[0].endpointStatus, 'true-ending');
+});
+
+test('typed uncertain reviews have no training target and preserve the initial graph and generation provenance', () => {
+  const uncertain = makeReview(pointTask, 'uncertain', metadata);
+  assert.equal(uncertain.trainingTarget, null);
+  assert.equal(uncertain.trainingLabel, null);
+  assert.equal(uncertain.selectedCandidateId, null);
+  assert.equal(uncertain.proposedEdge, null);
+  assert.equal(uncertain.status, 'deferred');
+  assert.deepEqual(graphNodesAfterReview(pointTask, uncertain), pointTask.nodes);
+  assert.deepEqual(graphEdgesAfterReview(pointTask, uncertain), pointTask.edges);
+  assert.deepEqual(uncertain.generation, pointTask.generation);
+  assert.deepEqual(uncertain.candidateGeneration, pointTask.candidateGeneration);
+  uncertain.generation.settings.radius = -1;
+  uncertain.candidateGeneration.nearbyFragmentEndpoints.push('invented');
+  assert.equal(pointTask.generation.settings.radius, 8);
+  assert.deepEqual(pointTask.candidateGeneration.nearbyFragmentEndpoints, []);
+  const records = [uncertain, makeReview(pointTask, 'none', metadata), makeReview(selectionTask, 'select', {...metadata, candidateId: 'b'})];
+  assert.deepEqual(summarizeReviews(records), {total: 3, accept: 1, reject: 0, uncertain: 1, none: 1});
+  const exported = createExport(records);
+  assert.equal(exported.version, 3);
+  assert.equal(exported.reviews.length, 3);
+  assert.equal(exported.supervisedCandidates.length, 2);
+  assert.ok(exported.supervisedCandidates.every(row => row.trainingTarget && row.validation === 'unverified-demo-review'));
+});
+
+test('task-specific actions, missing selections, and changed candidates are rejected', () => {
+  assert.throws(() => makeReview(selectionTask, 'select', metadata), /valid candidateId/);
+  assert.throws(() => makeReview(selectionTask, 'select', {...metadata, candidateId: 'absent'}), /valid candidateId/);
+  assert.throws(() => makeReview(selectionTask, 'none', metadata), /not valid/);
+  assert.throws(() => makeReview(selectionTask, 'reject', metadata), /not valid/);
+  assert.throws(() => makeReview(pointTask, 'reject', metadata), /not valid/);
+  assert.throws(() => makeReview(pointTask, 'none', {...metadata, candidateId: 'p1'}), /do not select/);
+  const selection = makeReview(selectionTask, 'select', {...metadata, candidateId: 'b'});
+  const changed = structuredClone(selectionTask);
+  changed.candidates[0].metrics.distance = 99;
+  assert.throws(() => graphEdgesAfterReview(changed, selection), /different candidate connection set/);
+  const malformed = structuredClone(pointTask);
+  malformed.candidates[0].nodeId = 'a';
+  assert.throws(() => makeReview(malformed, 'select', {...metadata, candidateId: 'p1'}), /outside the initial graph/);
+  assert.throws(() => graphNodesAfterReview({...pointTask, dataRevision: 4}, makeReview(pointTask, 'none', metadata)), /different dataRevision/);
 });

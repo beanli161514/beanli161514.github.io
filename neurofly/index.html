@@ -20,7 +20,7 @@
       <div class="intro-main">
         <h1 id="page-title">NeuroFly: a data engine for neuron reconstruction</h1>
         <p class="author">Rubin Zhao</p>
-        <p class="dek">NeuroFly extracts neuron fragments through learning-based segmentation and automated tracing, then reformulates fragment assembly as structured decisions: accept, reject, or uncertain. Tasks generated from unchecked endpoints pair candidate connections with local 3D image context for human or vision-language model (VLM) review. Outcomes update the neuron graph and retain reviewer attribution and status for training and evaluation.</p>
+        <p class="dek">NeuroFly extracts neuron fragments through learning-based segmentation and automated tracing, then reformulates reconstruction as structured endpoint tasks: review a connection between fragments, select among nearby fragment endpoints, or choose a continuation point when no nearby endpoint is available. Each task pairs a small action set with local 3D image context for human or vision-language model (VLM) review. Outcomes update the neuron graph and retain reviewer attribution and status for training and evaluation.</p>
       </div>
     </section>
 
@@ -47,7 +47,8 @@
             <div id="volume-status" class="volume-status" role="status">Preparing the review volume…</div>
             <div class="orbit-hint">Drag to orbit <span>·</span> scroll to zoom</div>
           </div>
-          <div class="volume-legend" aria-label="Annotation colors"><span><i class="legend-source"></i>Source fragment · A</span><span><i class="legend-candidate"></i>Candidate fragment · B</span><span><i class="legend-existing"></i>Other fragments</span><span><i class="legend-edge"></i>Candidate edge</span></div>
+          <div class="volume-legend" aria-label="Annotation colors"><span><i class="legend-source"></i>Source endpoint A</span><span><i class="legend-candidate"></i>Candidate endpoints / points</span><span><i class="legend-existing"></i>Other fragments</span><span><i class="legend-edge"></i>Candidate edges</span></div>
+          <div id="candidate-legend" class="candidate-legend" aria-label="Candidate identifiers"></div>
           <div class="volume-controls">
             <label class="check"><input id="annotations-toggle" type="checkbox" checked> Annotations</label>
             <label class="range-control" for="contrast"><span>Contrast</span><input id="contrast" type="range" min="0.2" max="3" step="0.05" value="1"></label>
@@ -56,21 +57,17 @@
         </article>
 
         <aside class="decision-panel" aria-labelledby="task-title">
-          <div class="decision-top"><span class="eyebrow">CANDIDATE CONNECTION</span><span id="task-number" class="task-number">TASK —</span></div>
+          <div class="decision-top"><span id="task-kind" class="eyebrow">CONNECTION REVIEW</span><span id="task-number" class="task-number">TASK —</span></div>
           <h3 id="task-title">Should this candidate connection be accepted?</h3>
           <p id="task-context" class="task-context">Inspect the image evidence between source endpoint A and candidate endpoint B. Rotate the volume to distinguish overlapping structures.</p>
           <dl class="task-details"><div><dt>Evidence</dt><dd id="task-source">Loading source…</dd></div><div><dt>Local window</dt><dd id="task-bytes">—</dd></div></dl>
-          <div class="decision-actions" role="group" aria-label="Review the candidate connection">
-            <button id="decision-accept" class="decision-button accept" type="button"><span>Accept</span><kbd>1</kbd></button>
-            <button id="decision-reject" class="decision-button reject" type="button"><span>Reject</span><kbd>2</kbd></button>
-            <button id="decision-uncertain" class="decision-button uncertain" type="button"><span>Uncertain</span><kbd>3</kbd></button>
-          </div>
+          <div id="decision-actions" class="decision-actions" role="group" aria-label="Available review outcomes"></div>
           <p id="decision-feedback" class="decision-feedback" role="status" aria-live="polite">A decision updates the graph status and records the review outcome.</p>
           <div class="decision-footer"><button id="undo-decision" class="text-button" type="button" disabled>Undo decision</button><button id="next-task" class="next-button" type="button" disabled>Next task <span aria-hidden="true">→</span></button></div>
           <p class="local-note">Session records are stored locally in this browser.</p>
         </aside>
       </div>
-      <p class="viewer-note">Points and edges share the image volume’s 3D coordinate system. The candidate edge is white before review, then green (accepted), red (rejected), or purple (uncertain).</p>
+      <p class="viewer-note">Points and edges share the image volume’s 3D coordinate system. In point-proposal tasks, selecting None marks source endpoint A as a true ending; it does not mean the evidence is uncertain.</p>
     </section>
 
     <section class="engine-section" aria-labelledby="engine-title">
@@ -78,21 +75,21 @@
       <div class="engine-intro"><p>Model predictions → human / VLM review → curated data → improved predictions.</p></div>
       <div class="engine-grid">
         <div class="pipeline" aria-label="Data engine lifecycle">
-          <article id="pipeline-review" class="pipeline-stage active"><span class="stage-index">01</span><div><h3>Task generation</h3><p>Unchecked neuron endpoints define candidate connections, each paired with local image context for review.</p><span class="stage-tag">IMAGE WINDOW + CANDIDATE EDGE</span></div></article>
-          <article id="pipeline-graph" class="pipeline-stage"><span class="stage-index">02</span><div><h3>Graph update</h3><p id="graph-status">Accepted edges connect fragments. Rejected connections remain separate. Uncertain cases retain their review status.</p><span class="stage-tag">ACCEPT / REJECT / UNCERTAIN</span></div></article>
+          <article id="pipeline-review" class="pipeline-stage active"><span class="stage-index">01</span><div><h3>Task generation</h3><p>Review one connection, choose among nearby fragment endpoints, or inspect proposed continuation points when no nearby endpoint is available. Each task includes the local image context.</p><span class="stage-tag">ENDPOINT + LOCAL IMAGE + CANDIDATES</span></div></article>
+          <article id="pipeline-graph" class="pipeline-stage"><span class="stage-index">02</span><div><h3>Graph update</h3><p id="graph-status">Selected candidates connect or extend the graph. Rejected connections remain separate. None in a point-proposal task records a true ending; uncertain cases retain their review status.</p><span class="stage-tag">CONNECTION / CONTINUATION / TRUE ENDING</span></div></article>
           <article id="pipeline-data" class="pipeline-stage"><span class="stage-index">03</span><div><h3>Training and evaluation data</h3><p>Review records retain image context, graph state, reviewer attribution, and status. Curated records support subsequent training and evaluation.</p><span class="stage-tag">ATTRIBUTED REVIEW RECORDS</span></div></article>
         </div>
 
         <article class="record-panel" aria-labelledby="record-title">
           <div class="record-heading"><div><h3 id="record-title">Review record</h3></div><span class="mono">JSON / LOCAL SESSION</span></div>
-          <div class="record-stats" aria-label="Review outcomes"><div><strong id="records-count">0</strong><span>Reviewed</span></div><div><strong id="positive-count">0</strong><span><i class="stat-yes"></i>Accepted</span></div><div><strong id="negative-count">0</strong><span><i class="stat-no"></i>Rejected</span></div><div><strong id="uncertain-count">0</strong><span><i class="stat-uncertain"></i>Uncertain</span></div></div>
+          <div class="record-stats" aria-label="Review outcomes"><div><strong id="records-count">0</strong><span>Reviewed</span></div><div><strong id="positive-count">0</strong><span><i class="stat-yes"></i>Connected</span></div><div><strong id="negative-count">0</strong><span><i class="stat-no"></i>Rejected</span></div><div><strong id="uncertain-count">0</strong><span><i class="stat-uncertain"></i>Uncertain</span></div><div><strong id="terminal-count">0</strong><span><i class="stat-terminal"></i>True endings</span></div></div>
           <pre id="record-json" tabindex="0" aria-label="Structured review record">Select a review outcome to inspect the structured record.</pre>
           <div class="record-footer"><button id="reset-session" class="text-button" type="button">Reset session</button><button id="export-records" class="outline-button" type="button">Export records <span aria-hidden="true">↓</span></button></div>
         </article>
       </div>
     </section>
 
-    <section class="context-note" aria-label="Implementation and demonstration data"><h2>Implementation and data</h2><p>Large image volumes remain in storage; local image windows and the neuron graph define each review task. The public NeuroFly repository contains the tools for creating initial reconstruction data, one component of the data-engine workflow. This browser demo uses saved annotations from a 600 MB public sample with display-normalized 32 × 32 × 32 voxel image windows.</p><p class="demo-note">Demo reviews are local and unverified. Model inference and training are not run in the browser.</p><a href="https://github.com/beanli161514/neurofly" target="_blank" rel="noreferrer">NeuroFly source code <span aria-hidden="true">↗</span></a></section>
+    <section class="context-note" aria-label="Implementation and demonstration data"><h2>Implementation and data</h2><p>Large image volumes remain in storage; local image windows and the neuron graph define each review task. The public NeuroFly repository contains the tools for creating initial reconstruction data, one component of the data-engine workflow. This browser demo uses saved annotations from a 600 MB public sample with display-normalized 32 × 32 × 32 voxel image windows. Its point candidates are deterministic image proposals: points near local intensity maxima at an appropriate distance, guided by the endpoint direction.</p><p class="demo-note">Demo reviews are local and unverified. Candidate generation here does not use model inference; training is not run in the browser.</p><a href="https://github.com/beanli161514/neurofly" target="_blank" rel="noreferrer">NeuroFly source code <span aria-hidden="true">↗</span></a></section>
   </main>
 
   <footer><span>Rubin Zhao · NeuroFly research demo</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">NeuroFly dataset ↗</a><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a><a href="./DATA_FORMAT.md">Data &amp; provenance ↗</a><a href="/">Ear reconstruction ↗</a></div></footer>

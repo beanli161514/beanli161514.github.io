@@ -4,6 +4,8 @@ import {LineSegments2} from 'three/addons/lines/LineSegments2.js';
 import {LineSegmentsGeometry} from 'three/addons/lines/LineSegmentsGeometry.js';
 import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
 
+export const CANDIDATE_COLORS=['#efbb55','#e993b8','#a1a0ee'];
+
 // GPU ray casting of real scalar voxels. A MIP takes the brightest sample along
 // each view ray; annotations are overlaid in the very same voxel coordinates.
 const vertexShader = `
@@ -108,7 +110,7 @@ export class VolumeView {
         uCameraWorld:{value:new THREE.Matrix4()},uContrast:{value:1},uDepth:{value:1},uStep:{value:.6}},
     });
     this.volumeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),this.material));
-    this.labels=['A','B'].map(text=>{const el=document.createElement('span');el.className='volume-point-label';el.textContent=text;el.hidden=true;container.append(el);return el;});
+    this.labels=[];this.labelEntries=[];this.record=null;this.highlightId=null;
     this.lineMaterials=[];
     this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(container);
     this.renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();container.dispatchEvent(new CustomEvent('volume-error',{detail:'The graphics context was lost. Reload to restore the 3D view.'}));});
@@ -123,8 +125,14 @@ export class VolumeView {
     this.texture.unpackAlignment=1;this.texture.needsUpdate=true;
     this.material.uniforms.uVolume.value=this.texture;
     this.material.uniforms.uSize.value.fromArray(task.shape);
-    const a=task.nodes.find(n=>n.id===task.sourceId).position,b=task.nodes.find(n=>n.id===task.targetId).position;
-    this.material.uniforms.uFocus.value.fromArray(a).add(new THREE.Vector3(...b)).multiplyScalar(.5);
+    const source=task.nodes.find(n=>n.id===task.sourceId);
+    this.material.uniforms.uFocus.value.fromArray(source.position);
+    this.highlightId=null;
+    this.labels.forEach(label=>label.remove());
+    this.labelEntries=[{label:'A',position:source.position},...(task.candidates||[])];
+    this.labels=this.labelEntries.map(entry=>{
+      const el=document.createElement('span');el.className='volume-point-label';el.textContent=entry.label;el.hidden=true;this.container.append(el);return el;
+    });
     this.setGraph(null);
     this.setView('oblique');
   }
@@ -150,31 +158,57 @@ export class VolumeView {
     this.annotations.add(object);return object;
   }
 
+  setHighlight(candidateId) {
+    if(this.highlightId===candidateId)return;
+    this.highlightId=candidateId;this.setGraph(this.record);
+  }
+
   setGraph(record) {
+    this.record=record;
     disposeGroup(this.annotations);this.lineMaterials=[];
     if(!this.task)return;
-    const t=this.task, nodes=new Map(t.nodes.map(n=>[n.id,n.position])),nodeInfo=new Map(t.nodes.map(n=>[n.id,n]));
-    const isProposal=(a,b)=>(a===t.sourceId&&b===t.targetId)||(b===t.sourceId&&a===t.targetId);
-    // The proposed join is drawn separately, including its accepted/rejected state.
-    const sourceComponent=nodeInfo.get(t.sourceId).component,targetComponent=nodeInfo.get(t.targetId).component;
-    const colorFor=component=>component===sourceComponent?'#29c4df':component===targetComponent?'#efbb55':'#92a7c3';
+    const t=this.task,candidates=t.candidates||[];
+    const nodes=new Map(t.nodes.map(n=>[n.id,n.position])),nodeInfo=new Map(t.nodes.map(n=>[n.id,n]));
+    const sourceComponent=nodeInfo.get(t.sourceId).component;
+    const candidateIds=new Set(candidates.filter(c=>c.nodeId!=null).map(c=>c.nodeId));
+    const componentColors=new Map();
+    candidates.forEach((c,i)=>{if(c.nodeId!=null)componentColors.set(nodeInfo.get(c.nodeId)?.component,CANDIDATE_COLORS[i%CANDIDATE_COLORS.length]);});
+    const colorFor=component=>component===sourceComponent?'#29c4df':componentColors.get(component)||'#92a7c3';
     for(const component of new Set(t.nodes.map(n=>n.component))){
-      const context=t.edges.filter(([a,b])=>!isProposal(a,b)&&nodeInfo.get(a)?.component===component)
+      const context=t.edges.filter(([a])=>nodeInfo.get(a)?.component===component)
         .flatMap(([a,b])=>nodes.has(a)&&nodes.has(b)?[...nodes.get(a),...nodes.get(b)]:[]);
       this.makeLine(context,colorFor(component),1.8);
-      this.makePoints(t.nodes.filter(n=>n.component===component&&n.id!==t.sourceId&&n.id!==t.targetId).flatMap(n=>n.position),colorFor(component),.36);
+      this.makePoints(t.nodes.filter(n=>n.component===component&&n.id!==t.sourceId&&!candidateIds.has(n.id)).flatMap(n=>n.position),colorFor(component),.36);
     }
-    const a=new THREE.Vector3(...nodes.get(t.sourceId)),b=new THREE.Vector3(...nodes.get(t.targetId));
-    const color=record?.decision==='accept'?'#50e7a1':record?.decision==='reject'?'#f48f96':record?.decision==='uncertain'?'#c0a3f6':'#f4f6fa';
-    this.makeLine([...a,...b],color,2.2,1,record?.decision!=='accept');
-    const direction=b.clone().sub(a),length=direction.length();
-    if(length>0){
-      direction.normalize();
-      const tip=b.clone().addScaledVector(direction,-.65),head=Math.min(.7,length*.2);
-      const arrow=new THREE.ArrowHelper(direction,tip.clone().addScaledVector(direction,-head),head,color,head,head*.7);
-      arrow.line.visible=false;arrow.cone.material.clippingPlanes=this.clipPlanes;this.annotations.add(arrow);
-    }
-    this.makePoints([...a],'#29c4df',.53);this.makePoints([...b],'#efbb55',.53);
+    const a=new THREE.Vector3(...nodes.get(t.sourceId));
+    const terminal=record?.decision==='none';
+    const chosen=record?.decision==='accept'?candidates[0]?.id:record?.decision==='select'?record.selectedCandidateId:null;
+    candidates.forEach((candidate,i)=>{
+      const b=new THREE.Vector3(...candidate.position),active=this.highlightId===candidate.id;
+      const selected=chosen===candidate.id,muted=terminal||Boolean(chosen&&!selected);
+      const candidateColor=CANDIDATE_COLORS[i%CANDIDATE_COLORS.length];
+      const color=selected?'#50e7a1':record?.decision==='reject'?'#f48f96':record?.decision==='uncertain'?'#c0a3f6':active?'#ffffff':candidates.length===1?'#f4f6fa':candidateColor;
+      if(!terminal){
+        this.makeLine([...a,...b],muted?'#536779':color,selected||active?2.5:1.8,1,!selected);
+        if(!muted){
+          const direction=b.clone().sub(a),length=direction.length();
+          if(length>0){
+            direction.normalize();
+            const tip=b.clone().addScaledVector(direction,-.65),head=Math.min(.7,length*.2);
+            const arrow=new THREE.ArrowHelper(direction,tip.clone().addScaledVector(direction,-head),head,color,head,head*.7);
+            arrow.line.visible=false;arrow.cone.material.clippingPlanes=this.clipPlanes;this.annotations.add(arrow);
+          }
+        }
+      }
+      this.makePoints([...b],muted?'#657482':candidateColor,(active||selected) ? .64 : .53);
+      const label=this.labels[i+1];
+      label.style.borderColor=selected?'#50e7a1':candidateColor;
+      label.style.opacity=muted?'.55':'1';
+      label.textContent=candidate.label;
+    });
+    this.makePoints([...a],terminal?'#50e7a1':'#29c4df',terminal ? .64 : .53);
+    this.labels[0].textContent=terminal?'A · true ending':'A';
+    this.labels[0].classList.toggle('terminal',terminal);
     this.render();
   }
 
@@ -232,11 +266,17 @@ export class VolumeView {
     this.renderer.setRenderTarget(null);this.renderer.clear();
     this.renderer.render(this.screenScene,this.quadCamera);
     this.renderer.clearDepth();this.renderer.render(this.graphScene,this.camera);
-    [this.task.sourceId,this.task.targetId].forEach((id,i)=>{
-      const world=new THREE.Vector3(...this.task.nodes.find(n=>n.id===id).position),p=world.clone().project(this.camera);
-      this.labels[i].hidden=!this.annotations.visible||Math.abs(p.x)>1||Math.abs(p.y)>1||Math.abs(world.sub(center).dot(direction))>half;
-      this.labels[i].style.left=`${(p.x+1)*this.container.clientWidth/2+(i?12:-23)}px`;
-      this.labels[i].style.top=`${(1-p.y)*this.container.clientHeight/2+(i?4:-22)}px`;
+    const placed=[];
+    this.labelEntries.forEach((entry,i)=>{
+      const world=new THREE.Vector3(...entry.position),p=world.clone().project(this.camera),label=this.labels[i];
+      label.hidden=!this.annotations.visible||Math.abs(p.x)>1||Math.abs(p.y)>1||Math.abs(world.sub(center).dot(direction))>half;
+      if(label.hidden)return;
+      const left=Math.max(2,Math.min(this.container.clientWidth-label.offsetWidth-2,(p.x+1)*this.container.clientWidth/2+(i?12:-23)));
+      let top=(1-p.y)*this.container.clientHeight/2+(i?4:-22);
+      for(const box of placed)if(Math.abs(left-box.left)<Math.max(label.offsetWidth,box.width)+4&&Math.abs(top-box.top)<24)top=box.top+24;
+      top=Math.max(2,Math.min(this.container.clientHeight-24,top));
+      label.style.left=`${left}px`;label.style.top=`${top}px`;
+      placed.push({left,top,width:label.offsetWidth});
     });
   }
 }

@@ -16,12 +16,12 @@ The dataset is the source of image values and graph geometry. The standalone exp
 
 | File | Dimensions xyz | Compressed bytes | Purpose |
 | --- | --- | ---: | --- |
-| `data/continuation-32.u8.gz` | 32 × 32 × 32 | 13,080 | Endpoint 2667, candidate 2769 |
-| `data/extension-32.u8.gz` | 32 × 32 × 32 | 13,792 | Endpoint 3814, candidate 3867 |
-| `data/crossing-32.u8.gz` | 32 × 32 × 32 | 10,804 | Endpoint 4583, candidate 4606 |
+| `data/fragment-connection-32-v3.u8.gz` | 32 × 32 × 32 | 13,080 | Fragment connection, source 2667 |
+| `data/endpoint-selection-32-v3.u8.gz` | 32 × 32 × 32 | 8,330 | Endpoint selection, source 1194 |
+| `data/point-proposal-32-v3.u8.gz` | 32 × 32 × 32 | 12,139 | Point proposal, source 4578 |
 | `data/overview.u8.gz` | 100 × 100 × 30 | 66,734 | Complete source block, max pooled 10× per axis |
 
-The four volume files total **104,410 compressed bytes**; the three task crops account for 37,676 bytes. A task crop expands to 32,768 uint8 bytes. `data/manifest.json` supplies source provenance, transforms, task prompts, graph geometry, and reference notes. Cases can be fetched independently and cached for later visits.
+The four volume files total **100,283 compressed bytes**; the three task crops account for 33,549 bytes. A task crop expands to 32,768 uint8 bytes. `data/manifest.json` supplies source provenance, transforms, task prompts, graph geometry, and reference notes. Cases can be fetched independently and cached for later visits.
 
 ## Coordinates and rendering
 
@@ -33,42 +33,47 @@ Display intensities use **8-bit display quantization**. Each crop maps its origi
 
 ## Manifest schema
 
-`schemaVersion: 2`, `dataRevision: 2`, and `revision: "endpoint-fragments-32-v2"` identify this format. The manifest uses `kind: "curated-decision-replay"`; top-level fields include `provenance`, `sourceVolume`, `axes`, `taskDesign`, `overview`, and `tasks`. Cached visitor reviews must be namespaced by this revision so votes on an earlier candidate are not transferred to a new one.
+`schemaVersion: 3`, `dataRevision: 3`, and `revision: "three-task-types-32-v3"` identify this format. The manifest uses `kind: "curated-decision-replay"`; top-level fields include `provenance`, `sourceVolume`, `axes`, `taskDesign`, `overview`, and `tasks`. Cached visitor reviews must be namespaced by this revision so votes on an earlier candidate are not transferred to a new one.
 
-Each task contains:
+Each task contains the volume transform and provenance, original `nodes` and `edges`, source endpoint and trajectory history, and a **`candidates` array**. Runtime selection must use the selected candidate's stable string `id` (`b`, `c`, or `d`). Top-level `targetId` and `targetPosition` are transitional aliases for the first candidate only; `targetId` is null for an image-point proposal.
 
-- `id`, `title`, `prompt`, `context`: concise presentation content.
-- `volume`, `shape`, `origin`, `spacing`, `compressedBytes`, `decodedBytes`, `intensityMapping`: volume decoding and display transform.
-- `nodes`: `{id, position: [x,y,z], component}` entries, with component IDs computed on the full original segmentation graph (before cropping).
-- `edges`: undirected `[sourceId, targetId]` pairs, listed once.
-- `sourceId`, `targetId`, `sourcePosition`, `targetPosition`: proposed connection endpoints.
-- `historyNodeIds`, `history`, `incomingVector`: previous segmentation nodes ordered toward the source endpoint, and a unit vector toward that endpoint.
-- `sourceDegree`, `sourceFragmentId`, `targetFragmentId`: source endpoint degree and two distinct original fragment identities.
-- `centerReviewStatus: "unchecked"`, `taskType: "endpoint-fragment-connection"`, `taskProvenance: "curated-segmentation-fragment-replay"`, and `replayState`: explicit task/review semantics. The unchecked state is simulated; `savedSourceChecked` retains the source DB flag.
-- `originalEdgePresent`, `heldOutEdges`, `heldOutReviewerEdges`, `replayNote`: proposed connection and reviewer edges excluded from the initial graph.
-- `reviewerPath`, `reviewerPathEdges`: saved reviewer connection path and edge creator provenance, retained for reference only.
-- `referenceDecision`, `referenceNote`: documented reference evidence, with `null` when unresolved.
+| Field | Meaning |
+| --- | --- |
+| `taskType` | `fragment-connection`, `endpoint-selection`, or `point-proposal` |
+| `sourceId`, `sourcePosition`, `sourceDegree`, `sourceFragmentId` | Original degree-one source endpoint and its full-graph fragment |
+| `historyNodeIds`, `history`, `incomingVector` | Up to five preceding original segmentation nodes, ordered toward the endpoint, and the incoming unit direction |
+| `candidates` | Stable ID/label, `nodeId` or null, local xyz, `kind`, measured distance, direction cosine, original intensity, and provenance |
+| `candidateGeneration` | Endpoint search radius or explicit image-maximum selection parameters |
+| `nearbyEndpointCount`, `nearbyEndpointIds` | Other-fragment endpoints found in the full original graph within the declared radius |
+| `allowsNone`, `noneMeaning`, `allowsUncertain` | None is available only for point proposal and means a true ending; uncertainty is independent |
+| `centerReviewStatus`, `replayState` | Simulated unchecked state plus the actual saved source review flag |
+| `heldOutReviewerEdges`, `reviewerPath`, `reviewerPathEdges` | Excluded reviewer edits and any documented reference path |
+| `referenceDecision`, `referenceCandidateId`, `referenceNote` | Verified saved reference where available; null otherwise |
 
-## Task construction
+Graph nodes contain only original segmentation nodes, with `{id, position, component}`. Full original-graph component IDs are calculated before cropping. Edges are undirected ID pairs, listed once. A candidate `kind: "fragment-endpoint"` references an existing node in another component. An `"image-point"` has `nodeId: null` and is only a proposed measured location, never an existing node fabricated into the initial graph.
 
-Every task starts from an **unchecked neuron endpoint** and proposes a connection to a node in another original segmentation fragment. The fixed actions are **accept**, **reject**, and **uncertain**. The same neutral prompt is used throughout: “Should this candidate connection be accepted?” A visitor inspects the local 3D fluorescence and trajectory continuity, then records one structured decision.
+## Three task types
 
-The initial graph contains **only `seger` edges and their original nodes**. All reviewer (`tester`) joins and interpolated (`astar`) paths are removed from the initial task context. Reviewer-added isolated nodes are not presented as candidate fragments. Each source has degree one in the full original segmentation graph and in the displayed crop; the candidate belongs to a different full-graph connected component. These conditions are verified during export and validation. The endpoint's unchecked status is a simulated pre-review condition, not a claim about its saved database flag. Original databases stay unchanged.
+All three tasks begin at a degree-one endpoint of the full original segmentation graph. The local state treats that endpoint as unchecked for replay. This is explicitly simulated; it does not replace the actual `savedSourceChecked` database flag. Initial context contains only `seger` edges and their original nodes. All reviewer `tester` joins and interpolated `astar` paths are excluded.
 
-Example 01 uses source 2667 and candidate 2769; the recorded reference is the saved `tester` edge. Example 02 uses source 3814 and original-fragment candidate 3867. Its saved reviewer path is `[3814, 6740, 7473, 3867]`, with creators `tester`, `astar`, and `astar`. There is **no saved direct 3814–3867 edge** (`originalEdgePresent: false`). That path supports the same-fiber fragment-level acceptance reference; it does not establish a straight candidate line as a ground-truth geometric trace.
+1. **Fragment connection.** Source 2667 and candidate 2769 form one proposed connection between original fragments. The actions are accept, reject, or uncertain. The saved `tester` edge is the verified reference for this example. The pair is curated; other endpoints can exist nearby without being presented as additional options in this task type.
+2. **Endpoint selection.** Source 1194 has three candidate endpoints in distinct other fragments: 1334 (B), 1193 (C), and 619 (D), at distances 3.74, 4.12, and 11.22 voxels. Candidates are degree-one nodes found within a **12-voxel Euclidean radius**, ordered by distance with at most one endpoint per other fragment. The action selects one candidate or records uncertainty. There is no None/true-ending choice for this type, and no validated target selection is assigned to the demo.
+3. **Point proposal.** Source 4578 has **zero endpoints from other fragments within 12 voxels**, verified against all 474 original endpoints. Three measured image maxima are proposed because there is no nearby graph endpoint to select. A chosen point can extend the local trajectory. **None means a true ending**; uncertainty remains a separate response. None of the proposed points is asserted to be a ground-truth continuation.
 
-The crossing has **no definitive reference outcome**. Its saved graph contains 4583–4606, while a later recorded model run favored candidate 6850 after a projected-tangent check. This disagreement is retained rather than treated as a ground-truth negative. Accept, reject and uncertainty are interface actions; none constitutes validated ground truth merely because a visitor selects it.
+Point proposals use the original uint16 image before display quantization. A candidate must be a maximum in its **3×3×3 voxel neighborhood**, at least as bright as the crop's 95th intensity percentile, **5–10 voxels** from the source, and inside a **75° forward cone** around the incoming direction. Candidates are ranked by `(intensity − crop median) × (0.3 + 0.7 × direction cosine)`, then separated by at least **3 voxels** and **20° of bearing**. No peak coordinates or fluorescence values are synthesized.
+
+For the selected point-proposal crop, B/C/D are local `[8,18,14]`, `[12,20,14]`, and `[9,22,17]`. Distances are 8.49, 6.00, and 9.27 voxels; original intensities are 4944, 2720, and 2416. Pairwise bearings differ by approximately 26–33°. The manifest records the precise thresholds and measured metrics for reproducibility.
 
 ## Visitor review records
 
-The page exports a structured local record containing the task/candidate, decision, review status and graph operation. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. This illustrates how standardized actions could feed review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
+The page exports a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. This illustrates how standardized actions could feed review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
 
 ## Reproduce
 
 Run from the source repository. The source directory must contain the publicly released `RM009_axons_2.tif` and corresponding `RM009_axons_2.db` (or its verified geometry-equivalent working copy).
 
 ```sh
-python -m pip install numpy tifffile
+python -m pip install numpy scipy tifffile
 python scripts/export_neurofly.py --source /path/to/labeled_blocks
 python scripts/verify_neurofly.py --source /path/to/labeled_blocks
 ```
@@ -87,4 +92,4 @@ python -m pip install pillow
 python scripts/export_neurofly.py --source /path/to/labeled_blocks --qa /path/to/qa
 ```
 
-Source images are memory-mapped with `mode="r"`; SQLite databases are opened with `mode=ro`. Verification checks the complete encoded crop transforms, every exported graph coordinate, 32³ dimensions and endpoint centering, distinct source/candidate fragments, degree-one source topology, recorded reviewer-path provenance, published source fingerprints, and complete overview downsampling.
+Source images are memory-mapped with `mode="r"`; SQLite databases are opened with `mode=ro`. Verification checks the complete encoded crop transforms, every exported graph coordinate, 32³ dimensions and endpoint centering, distinct fragment endpoint candidates, degree-one source topology, exhaustive nearby-endpoint searches, source-voxel intensities and local maxima, radial/cone/separation constraints, saved reference provenance, published fingerprints, and complete overview downsampling.

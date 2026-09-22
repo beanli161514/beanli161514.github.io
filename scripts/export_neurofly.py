@@ -1,34 +1,44 @@
 #!/usr/bin/env python3
-"""Read-only export of public NeuroFly crops and held-out graph joins for the web.
+"""Export three real NeuroFly task types as read-only, source-centered 32³ crops.
 
-Input TIFF array + graph coordinates are xyz, despite generic TIFF QYX labels.
-Output bytes are uint8 C-order zyx (x varies fastest), suited to Data3DTexture.
-No labels are inferred, source DB is opened mode=ro and image memmap mode=r.
+Source TIFF and graph coordinates are xyz. Payloads are uint8 C-order zyx.
+The selected examples come from the published RM009_axons_2 sample only.
 """
+import argparse
+import ast
+import collections
+import gzip
+import hashlib
+import json
 from pathlib import Path
-import argparse, ast, collections, gzip, hashlib, json, sqlite3
+import sqlite3
+
 import numpy as np
+from scipy.ndimage import maximum_filter
 import tifffile
 
 DEFAULT_OUT = Path(__file__).resolve().parents[1] / 'public' / 'neurofly' / 'data'
-PUBLISHED_IMAGE_MD5 = '21e734a367969d84b93b7613d7a5f729'
-PUBLISHED_DB_MD5 = 'df076171651054f04026a6e360fba765'
-# SHA256 over ordered node positions, directed edges + provenance, and segment geometry.
-# Derived from the public Zenodo database whose MD5 is above; review flags excluded.
-PUBLISHED_GEOMETRY_SHA256 = '7f194483dbb7ac8052e5b54542eac9c15c7b903dc7b447be970e0adcfabf385a'
 NAME = 'RM009_axons_2'
 SIZE = 32
+REVISION = 'three-task-types-32-v3'
+NEARBY_RADIUS = 12.0
+PUBLISHED_IMAGE_MD5 = '21e734a367969d84b93b7613d7a5f729'
+PUBLISHED_DB_MD5 = 'df076171651054f04026a6e360fba765'
+# Ordered coordinates, directed edges + provenance, segment geometry; review flags excluded.
+PUBLISHED_GEOMETRY_SHA256 = '7f194483dbb7ac8052e5b54542eac9c15c7b903dc7b447be970e0adcfabf385a'
+
 
 def decode_coord(value):
-    return np.array(ast.literal_eval(value.decode() if isinstance(value, bytes) else value),dtype=float)
+    return np.array(ast.literal_eval(value.decode() if isinstance(value, bytes) else value), dtype=float)
+
+
 def checksum(path):
-    h=hashlib.md5()
-    with path.open('rb') as f:
-        for b in iter(lambda:f.read(4*1024*1024),b''):h.update(b)
-    return h.hexdigest()
-def write_gzip(path,payload):
-    with path.open('wb') as f:
-        with gzip.GzipFile(filename='',fileobj=f,mode='wb',mtime=0,compresslevel=9) as z:z.write(payload)
+    digest = hashlib.md5()
+    with path.open('rb') as source:
+        for block in iter(lambda: source.read(4*1024*1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
 
 def geometry_checksum(connection):
     digest = hashlib.sha256()
@@ -44,141 +54,305 @@ def geometry_checksum(connection):
     return digest.hexdigest()
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--source', type=Path, required=True,
-                        help='Directory containing RM009_axons_2.tif and RM009_axons_2.db')
-    parser.add_argument('--out', type=Path, default=DEFAULT_OUT,
-                        help='Output runtime directory (default: public/neurofly/data)')
-    parser.add_argument('--qa', type=Path, help='Optional directory for orthogonal QA PNGs')
-    args = parser.parse_args()
-    SOURCE, HERE = args.source.resolve(), args.out.resolve()
-    image_path = SOURCE / (NAME + '.tif')
-    db_path = SOURCE / (NAME + '.db')
-    image_md5 = checksum(image_path)
-    if image_md5 != PUBLISHED_IMAGE_MD5:
-        raise ValueError('This curated replay requires the published RM009_axons_2.tif; checksum differs.')
-    con = sqlite3.connect(db_path.as_uri() + '?mode=ro', uri=True)
-    geometry_sha256 = geometry_checksum(con)
-    if geometry_sha256 != PUBLISHED_GEOMETRY_SHA256:
-        raise ValueError('Source graph differs from the public reference. Re-curate decisions before exporting.')
-    volume = tifffile.memmap(image_path, mode='r')
-    if volume.shape != (1000, 1000, 300) or volume.dtype != np.dtype('uint16'):
-        raise ValueError('Unexpected source shape or dtype.')
-    HERE.mkdir(parents=True, exist_ok=True)
-    if args.qa:
-        args.qa.mkdir(parents=True, exist_ok=True)
-        from PIL import Image, ImageDraw
-    nodes={r[0]:{'position':decode_coord(r[1]),'status':r[3],'checked':r[6]} for r in con.execute('SELECT * FROM nodes')}
-    all_edges={tuple(sorted((a,b))):creator for a,b,creator in con.execute('SELECT src,des,creator FROM edges') if a!=b and a in nodes and b in nodes}
-    source_info={'filename':NAME+'.tif','shapeXYZ':list(volume.shape),'dtype':str(volume.dtype),'bitDepth':16,'voxelCount':int(volume.size),'uncompressedBytes':int(volume.nbytes),'fileBytes':(SOURCE/(NAME+'.tif')).stat().st_size,'md5':image_md5,'database':NAME+'.db','databaseMD5':checksum(SOURCE/(NAME+'.db')),'publishedDatabaseMD5':PUBLISHED_DB_MD5,'geometrySHA256':geometry_sha256,'publishedGeometryVerification':'Ordered node coordinates, edges with provenance, and segment geometry were checked against a SHA256 fingerprint of the published Zenodo database. Review flags are excluded from this comparison.','nodeCount':len(nodes),'undirectedEdgeCount':len(all_edges),'species':'macaque','imaging':'VISoR','coordinateUnit':'voxel','spacingCalibrated':False}
-    prompt = 'Should this candidate connection be accepted?'
-    context = ('Inspect the 3D fluorescence around the source endpoint and a candidate '
-               'in another segmentation fragment. Assess the continuity of the fiber.')
-    specs = [
-        {'id': 'continuation', 'title': 'Example 01', 'prompt': prompt, 'context': context,
-         'sourceId': 2667, 'targetId': 2769, 'referenceDecision': 'accept',
-         'reviewerPath': [2667, 2769],
-         'referenceNote': 'The saved reviewer graph connects fragments through the tester edge 2667–2769. It also appears in the repository trace summary. This supports fragment continuity; it is a recorded reference, not a new model inference.'},
-        {'id': 'extension', 'title': 'Example 02', 'prompt': prompt, 'context': context,
-         'sourceId': 3814, 'targetId': 3867, 'referenceDecision': 'accept',
-         'reviewerPath': [3814, 6740, 7473, 3867],
-         'referenceNote': 'The saved reviewer graph connects these original fragments by path 3814–6740–7473–3867 (tester, astar, astar). This supports same-fiber continuity. There is no original direct 3814–3867 edge; the demo connection is a fragment-level decision, not ground truth for a straight interpolated path.'},
-        {'id': 'crossing', 'title': 'Example 03', 'prompt': prompt, 'context': context,
-         'sourceId': 4583, 'targetId': 4606, 'referenceDecision': None,
-         'reviewerPath': [4583, 4606],
-         'referenceNote': 'Reference unresolved. The saved graph contains 4583–4606, while the repository trace summary reports that this candidate failed a projected tangent check and another candidate was favored. No definitive reference decision is assigned.'},
-    ]
-    # Reconstruct original segmentation fragments: exclude ALL reviewer joins,
-    # interpolated paths, and reviewer-added nodes from the initial task graph.
-    segmentation_edges = {edge for edge, creator in all_edges.items() if creator == 'seger'}
-    segmentation_nodes = {nid for edge in segmentation_edges for nid in edge}
-    segmentation_adj = collections.defaultdict(set)
-    for a, b in segmentation_edges:
-        segmentation_adj[a].add(b)
-        segmentation_adj[b].add(a)
-    fragment_ids = {}
-    for seed in sorted(segmentation_nodes):
-        if seed in fragment_ids:
+def write_gzip(path, payload):
+    with path.open('wb') as output:
+        with gzip.GzipFile(filename='', fileobj=output, mode='wb', mtime=0, compresslevel=9) as archive:
+            archive.write(payload)
+
+
+def original_graph(connection):
+    nodes = {row[0]: {'position': decode_coord(row[1]), 'status': row[3], 'checked': row[6]}
+             for row in connection.execute('SELECT * FROM nodes')}
+    all_edges = {tuple(sorted((a, b))): creator
+                 for a, b, creator in connection.execute('SELECT src,des,creator FROM edges')
+                 if a != b and a in nodes and b in nodes}
+    edges = {edge for edge, creator in all_edges.items() if creator == 'seger'}
+    adjacency = collections.defaultdict(set)
+    for a, b in edges:
+        adjacency[a].add(b)
+        adjacency[b].add(a)
+    fragments = {}
+    for seed in sorted(adjacency):
+        if seed in fragments:
             continue
         queue = [seed]
-        fragment_ids[seed] = seed
+        fragments[seed] = seed
         while queue:
             a = queue.pop()
-            for b in segmentation_adj[a]:
-                if b not in fragment_ids:
-                    fragment_ids[b] = seed
+            for b in adjacency[a]:
+                if b not in fragments:
+                    fragments[b] = seed
                     queue.append(b)
-    manifest={'schemaVersion':2,'dataRevision':2,'revision':'endpoint-fragments-32-v2','kind':'curated-decision-replay','provenance':{'title':'NeuroFly Neuron Reconstruction Dataset','url':'https://zenodo.org/records/13328867','doi':'10.5281/zenodo.13328867','license':'CC-BY-4.0','licenseUrl':'https://creativecommons.org/licenses/by/4.0/','creatorsAsDeposited':['Anonymous, Anonymous'],'sourceCode':'https://github.com/beanli161514/neurofly','annotationGuide':'https://github.com/beanli161514/neurofly/blob/main/docs/agent_annotation.md','note':'Real image crops and saved graph geometry; interface actions demonstrate the structured graph-review workflow. Visitor decisions are unverified demo records, not expert truth. No model inference or training runs in this page.'},'sourceVolume':source_info,'axes':{'positions':'xyz','volumeBytes':'uint8, C-order zyx, x varies fastest','spacing':[1,1,1],'unit':'voxel','note':'TIFF does not provide physical calibration; do not interpret voxel counts as micrometers.'},'taskDesign':{'source':'Original segmentation-fragment endpoint','candidate':'Node in another original segmentation fragment','choices':['accept','reject','uncertain'],'initialEdges':'seger only','reviewState':'simulated-pre-review-unchecked','note':'Original reviewer joins and interpolated paths are excluded. The unchecked state is a replay assumption, not the saved database review flag.'},'tasks':[]}
-    for task in specs:
-        sid, tid = task['sourceId'], task['targetId']
-        if len(segmentation_adj[sid]) != 1:
-            raise ValueError(f'{task["id"]}: source must be an original fragment endpoint')
-        if tid not in fragment_ids or fragment_ids[sid] == fragment_ids[tid]:
-            raise ValueError(f'{task["id"]}: candidate must belong to another original fragment')
-        origin = np.clip(np.floor(nodes[sid]['position']).astype(int)-SIZE//2,
-                         0, np.array(volume.shape)-SIZE)
-        raw=np.asarray(volume[tuple(slice(int(x),int(x+SIZE)) for x in origin)])
-        low,high=np.percentile(raw,[30,99.95]);scaled=np.rint(np.clip((raw.astype(np.float32)-low)/(high-low),0,1)*255).astype(np.uint8)
-        file=task['id']+'-32.u8.gz';write_gzip(HERE/file,scaled.transpose(2,1,0).tobytes())
-        inside = {nid for nid in segmentation_nodes
-                  if nodes[nid]['status'] != 0
-                  and np.all(nodes[nid]['position'] >= origin)
-                  and np.all(nodes[nid]['position'] < origin+SIZE)}
-        if sid not in inside or tid not in inside:
-            raise ValueError(f'{task["id"]}: source and candidate must lie within the 32-cube')
-        held = tuple(sorted((sid, tid)))
-        edges = sorted(edge for edge in segmentation_edges if all(n in inside for n in edge))
-        adj = collections.defaultdict(list)
-        for a, b in edges:
-            adj[a].append(b)
-            adj[b].append(a)
-        if len(adj[sid]) != 1:
-            raise ValueError(f'{task["id"]}: crop must preserve endpoint history')
-        components = {nid: fragment_ids[nid] for nid in inside}
-        # Audit all saved reviewer edges whose endpoints lie geometrically in the ROI.
-        spatial_nodes = {nid for nid, node in nodes.items()
-                         if np.all(node['position'] >= origin)
-                         and np.all(node['position'] < origin+SIZE)}
-        held_reviewer_edges = [list(edge) for edge, creator in sorted(all_edges.items())
-                               if creator != 'seger' and all(n in spatial_nodes for n in edge)]
-        reference_edges = []
-        for a, b in zip(task['reviewerPath'][:-1], task['reviewerPath'][1:]):
-            creator = all_edges.get(tuple(sorted((a, b))))
-            if creator not in ('tester', 'astar'):
-                raise ValueError(f'{task["id"]}: recorded reference path is missing')
-            reference_edges.append({'sourceId': a, 'targetId': b, 'creator': creator})
-        path=[sid];prev=None;cur=sid
-        for _ in range(5):
-            candidates=[n for n in adj[cur] if n!=prev and n not in path and all_edges[tuple(sorted((cur,n)))]=='seger']
-            if len(candidates)!=1:break
-            prev,cur=cur,candidates[0];path.append(cur)
-        history=[(nodes[n]['position']-origin).tolist() for n in reversed(path)]
-        vec=nodes[sid]['position']-nodes[path[-1]]['position'];norm=float(np.linalg.norm(vec));vec=vec/norm if norm else vec
-        task.update(centerReviewStatus='unchecked',taskType='endpoint-fragment-connection',taskProvenance='curated-segmentation-fragment-replay',volume=file,shape=[SIZE]*3,origin=origin.tolist(),spacing=[1,1,1],sourceVolume=source_info,compressedBytes=(HERE/file).stat().st_size,decodedBytes=int(scaled.nbytes),intensityMapping={'method':'linear-clipped-percentile','originalType':'uint16','outputType':'uint8','low':float(low),'high':float(high),'percentiles':[30,99.95],'originalCropMin':int(raw.min()),'originalCropMax':int(raw.max()),'note':'Display quantization only; no deconvolution or synthetic signal.'},nodes=[{'id':nid,'position':(nodes[nid]['position']-origin).tolist(),'component':components[nid]} for nid in sorted(inside)],edges=[list(e) for e in edges],originalEdgePresent=held in all_edges,heldOutEdges=[list(held)],heldOutReviewerEdges=held_reviewer_edges,reviewerPathEdges=reference_edges,sourceDegree=len(segmentation_adj[sid]),sourceFragmentId=fragment_ids[sid],targetFragmentId=fragment_ids[tid],replayState={'sourceChecked':0,'sourceState':'unchecked','basis':'simulated-pre-review','savedSourceChecked':nodes[sid]['checked'],'initialGraph':'original-segmentation-fragments'},replayNote='The initial graph contains only original seger fragments. All reviewer joins and interpolated paths are withheld. The unchecked source state is simulated for this replay; the saved source database is unchanged.',sourcePosition=(nodes[sid]['position']-origin).tolist(),targetPosition=(nodes[tid]['position']-origin).tolist(),historyNodeIds=list(reversed(path)),history=history,incomingVector=vec.tolist())
-        if 'alternativeTargetId' in task:task['alternativeTargetPosition']=(nodes[task['alternativeTargetId']]['position']-origin).tolist()
+    return nodes, all_edges, edges, adjacency, fragments
+
+
+def source_history(source_id, nodes, adjacency, inside):
+    path = [source_id]
+    for _ in range(5):
+        choices = [n for n in adjacency[path[-1]] if n not in path and n in inside]
+        if len(choices) != 1:
+            break
+        path.append(choices[0])
+    direction = nodes[source_id]['position'] - nodes[path[-1]]['position']
+    length = float(np.linalg.norm(direction))
+    if length == 0:
+        raise ValueError('Endpoint must have a nondegenerate trajectory history')
+    return list(reversed(path)), direction / length
+
+
+def nearby_endpoints(source_id, nodes, adjacency, fragments, radius=NEARBY_RADIUS):
+    source = nodes[source_id]['position']
+    nearby = [nid for nid in adjacency if len(adjacency[nid]) == 1
+              and fragments[nid] != fragments[source_id]
+              and np.linalg.norm(nodes[nid]['position']-source) <= radius]
+    return sorted(nearby, key=lambda nid: (float(np.linalg.norm(nodes[nid]['position']-source)), nid))
+
+
+def propose_image_points(raw, source_local, direction):
+    """Return actual voxel maxima; score/radius/cone are disclosed, not ground truth."""
+    threshold = float(np.percentile(raw, 95))
+    background = float(np.median(raw))
+    maxima = (raw == maximum_filter(raw, size=3, mode='nearest')) & (raw >= threshold)
+    coordinates = np.argwhere(maxima)
+    delta = coordinates.astype(float)-source_local
+    distance = np.linalg.norm(delta, axis=1)
+    cosine = np.divide(np.sum(delta*direction, axis=1), distance,
+                       out=np.full(len(distance), -1.0), where=distance > 0)
+    minimum_cosine = float(np.cos(np.deg2rad(75)))
+    valid = (distance >= 5) & (distance <= 10) & (cosine >= minimum_cosine)
+    coordinates, distance, cosine = coordinates[valid], distance[valid], cosine[valid]
+    intensities = raw[tuple(coordinates.T)].astype(float)
+    score = (intensities-background)*(0.3+0.7*cosine)
+    order = sorted(range(len(coordinates)),
+                   key=lambda index: (-float(score[index]), *coordinates[index].tolist()))
+    selected = []
+    for index in order:
+        ray = (coordinates[index]-source_local)/distance[index]
+        separated = all(
+            np.linalg.norm(coordinates[index]-coordinates[other]) >= 3
+            and np.degrees(np.arccos(np.clip(np.dot(
+                ray, (coordinates[other]-source_local)/distance[other]), -1, 1))) >= 20
+            for other in selected)
+        if separated:
+            selected.append(index)
+        if len(selected) == 3:
+            break
+    points = [{'position': coordinates[index].astype(float).tolist(),
+               'distanceVoxels': float(distance[index]), 'directionCosine': float(cosine[index]),
+               'intensity': int(intensities[index]), 'score': float(score[index]),
+               'isLocalMaximum': True}
+              for index in selected]
+    parameters = {
+        'method': 'direction-conditioned-local-intensity-maxima',
+        'nearbyRadiusVoxels': NEARBY_RADIUS, 'distanceRangeVoxels': [5, 10],
+        'forwardConeDegrees': 75, 'minimumDirectionCosine': minimum_cosine,
+        'localMaximumWindow': [3, 3, 3], 'intensityThresholdPercentile': 95,
+        'intensityThresholdValue': threshold, 'medianCropIntensity': background,
+        'minimumCandidateSeparationVoxels': 3, 'minimumBearingSeparationDegrees': 20, 'maxCandidates': 3,
+        'scoreFormula': '(intensity - medianCropIntensity) * (0.3 + 0.7 * directionCosine)',
+        'note': 'Original uint16 voxel maxima; proposed locations are not validated continuation labels.',
+    }
+    return points, parameters
+
+
+def qa_image(path, raw8, task):
+    from PIL import Image, ImageDraw
+    canvas = Image.new('RGB', (SIZE*3, SIZE))
+    draw = ImageDraw.Draw(canvas)
+    nodes = {node['id']: np.array(node['position']) for node in task['nodes']}
+    for panel, (axis, dimensions) in enumerate([(2, (0, 1)), (1, (0, 2)), (0, (1, 2))]):
+        canvas.paste(Image.fromarray(raw8.max(axis=axis).T).convert('RGB'), (SIZE*panel, 0))
+        for a, b in task['edges']:
+            pa, pb = nodes[a], nodes[b]
+            draw.line((pa[dimensions[0]]+SIZE*panel, pa[dimensions[1]],
+                       pb[dimensions[0]]+SIZE*panel, pb[dimensions[1]]), fill=(60, 150, 180))
+        pa = task['sourcePosition']
+        x, y = pa[dimensions[0]]+SIZE*panel, pa[dimensions[1]]
+        draw.ellipse((x-1, y-1, x+1, y+1), fill=(40, 220, 255))
+        for candidate in task['candidates']:
+            position = candidate['position']
+            x, y = position[dimensions[0]]+SIZE*panel, position[dimensions[1]]
+            draw.ellipse((x-0.8, y-0.8, x+0.8, y+0.8), fill=(255, 170, 60))
+    canvas.resize((1152, 384)).save(path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', type=Path, required=True, help='Directory containing paired RM009_axons_2.tif/.db')
+    parser.add_argument('--out', type=Path, default=DEFAULT_OUT, help='Default: public/neurofly/data')
+    parser.add_argument('--qa', type=Path, help='Optional QA PNG directory (requires Pillow)')
+    args = parser.parse_args()
+    source_dir, output = args.source.resolve(), args.out.resolve()
+    image_path, db_path = source_dir/(NAME+'.tif'), source_dir/(NAME+'.db')
+    if checksum(image_path) != PUBLISHED_IMAGE_MD5:
+        raise ValueError('This curated export requires the published RM009_axons_2.tif')
+    connection = sqlite3.connect(db_path.as_uri()+'?mode=ro', uri=True)
+    if geometry_checksum(connection) != PUBLISHED_GEOMETRY_SHA256:
+        raise ValueError('Source graph differs from the published reference; re-curate before export')
+    volume = tifffile.memmap(image_path, mode='r')
+    if volume.shape != (1000, 1000, 300) or volume.dtype != np.dtype('uint16'):
+        raise ValueError('Unexpected source shape or dtype')
+    output.mkdir(parents=True, exist_ok=True)
+    if args.qa:
+        args.qa.mkdir(parents=True, exist_ok=True)
+    nodes, all_edges, original_edges, adjacency, fragments = original_graph(connection)
+    source_info = {
+        'filename': NAME+'.tif', 'shapeXYZ': list(volume.shape), 'dtype': str(volume.dtype),
+        'bitDepth': 16, 'voxelCount': int(volume.size), 'uncompressedBytes': int(volume.nbytes),
+        'fileBytes': image_path.stat().st_size, 'md5': PUBLISHED_IMAGE_MD5,
+        'database': NAME+'.db', 'databaseMD5': checksum(db_path), 'publishedDatabaseMD5': PUBLISHED_DB_MD5,
+        'geometrySHA256': PUBLISHED_GEOMETRY_SHA256,
+        'publishedGeometryVerification': 'Ordered node coordinates, edges with provenance, and segment geometry checked against the published database fingerprint. Review flags excluded.',
+        'nodeCount': len(nodes), 'undirectedEdgeCount': len(all_edges),
+        'originalEndpointCount': sum(len(neighbors) == 1 for neighbors in adjacency.values()),
+        'species': 'macaque', 'imaging': 'VISoR', 'coordinateUnit': 'voxel', 'spacingCalibrated': False,
+    }
+    specifications = [
+        {'id': 'fragment-connection', 'taskType': 'fragment-connection', 'title': 'Fragment connection',
+         'prompt': 'Should fragment A connect to fragment B?', 'sourceId': 2667,
+         'context': 'Inspect a proposed connection between two original segmentation fragments.',
+         'referenceDecision': 'accept', 'referenceCandidateId': 'b', 'reviewerPath': [2667, 2769],
+         'referenceNote': 'The saved reviewer graph contains tester edge 2667–2769. This recorded reference supports fragment continuity; it is not live inference.'},
+        {'id': 'endpoint-selection', 'taskType': 'endpoint-selection', 'title': 'Endpoint selection',
+         'prompt': 'Which nearby endpoint continues fragment A?', 'sourceId': 1194,
+         'context': 'Choose among three original endpoints in different fragments within 12 voxels of A.',
+         'referenceDecision': None, 'referenceCandidateId': None, 'reviewerPath': [],
+         'referenceNote': 'Candidate endpoints are measured original graph endpoints. No validated selection label is assigned to this demonstration.'},
+        {'id': 'point-proposal', 'taskType': 'point-proposal', 'title': 'Point proposal',
+         'prompt': 'Which proposed point continues fragment A, or is A a true ending?', 'sourceId': 4578,
+         'context': 'No other-fragment endpoint lies within 12 voxels. Inspect image maxima 5–10 voxels away in the 75° forward cone.',
+         'referenceDecision': None, 'referenceCandidateId': None, 'reviewerPath': [],
+         'referenceNote': 'These are direction-conditioned measured image maxima, not ground-truth continuation labels. None means a true ending; uncertainty remains a separate choice.'},
+    ]
+    manifest = {
+        'schemaVersion': 3, 'dataRevision': 3, 'revision': REVISION, 'kind': 'curated-decision-replay',
+        'provenance': {
+            'title': 'NeuroFly Neuron Reconstruction Dataset', 'url': 'https://zenodo.org/records/13328867',
+            'doi': '10.5281/zenodo.13328867', 'license': 'CC-BY-4.0',
+            'licenseUrl': 'https://creativecommons.org/licenses/by/4.0/', 'creatorsAsDeposited': ['Anonymous, Anonymous'],
+            'sourceCode': 'https://github.com/beanli161514/neurofly',
+            'annotationGuide': 'https://github.com/beanli161514/neurofly/blob/main/docs/agent_annotation.md',
+            'note': 'Real images, original segmentation fragments, and measured image-point proposals. Visitor choices are unverified demo reviews. No model inference or training runs in the page.',
+        },
+        'sourceVolume': source_info,
+        'axes': {'positions': 'xyz', 'volumeBytes': 'uint8, C-order zyx, x varies fastest',
+                 'spacing': [1, 1, 1], 'unit': 'voxel', 'note': 'Physical spacing is not supplied; voxel distances are not micrometers.'},
+        'taskDesign': {'taskTypes': ['fragment-connection', 'endpoint-selection', 'point-proposal'],
+                       'source': 'Unchecked original segmentation endpoint (simulated pre-review state)',
+                       'initialEdges': 'seger only', 'uncertaintyAvailableForAllTypes': True,
+                       'noneAvailableFor': ['point-proposal'], 'noneMeaning': 'true-ending',
+                       'note': 'Reviewer joins and interpolated paths are excluded from the initial graph.'},
+        'tasks': [],
+    }
+    for task in specifications:
+        source_id = task['sourceId']
+        if len(adjacency[source_id]) != 1:
+            raise ValueError('Task source must be a degree-one original endpoint')
+        origin = np.clip(np.floor(nodes[source_id]['position']).astype(int)-16, 0, np.array(volume.shape)-SIZE)
+        raw = np.asarray(volume[tuple(slice(int(x), int(x+SIZE)) for x in origin)])
+        source_local = nodes[source_id]['position']-origin
+        inside = {nid for nid in adjacency if nodes[nid]['status'] != 0
+                  and np.all(nodes[nid]['position'] >= origin) and np.all(nodes[nid]['position'] < origin+SIZE)}
+        history_ids, direction = source_history(source_id, nodes, adjacency, inside)
+        nearby = nearby_endpoints(source_id, nodes, adjacency, fragments)
+        candidates = []
+        if task['taskType'] == 'point-proposal':
+            if nearby:
+                raise ValueError('Point proposal requires no other-fragment endpoint within the declared radius')
+            peaks, generation = propose_image_points(raw, source_local, direction)
+            if len(peaks) < 2:
+                raise ValueError('Selected point-proposal example needs at least two measured maxima')
+            candidates = [{**peak, 'nodeId': None, 'kind': 'image-point',
+                           'provenance': 'measured-uint16-voxel-local-maximum'} for peak in peaks]
+        else:
+            candidate_ids = [2769] if task['taskType'] == 'fragment-connection' else nearby
+            seen = set()
+            for nid in candidate_ids:
+                if fragments[nid] in seen:
+                    continue
+                seen.add(fragments[nid])
+                if nid not in inside or nid not in nearby or len(adjacency[nid]) != 1:
+                    raise ValueError('Fragment candidates must be nearby original endpoints within the crop')
+                delta = nodes[nid]['position']-nodes[source_id]['position']
+                distance = float(np.linalg.norm(delta))
+                candidates.append({'nodeId': nid, 'kind': 'fragment-endpoint',
+                                   'position': (nodes[nid]['position']-origin).tolist(),
+                                   'fragmentId': fragments[nid], 'endpointDegree': 1,
+                                   'distanceVoxels': distance, 'directionCosine': float(np.dot(delta, direction)/distance),
+                                   'intensity': int(volume[tuple(nodes[nid]['position'].astype(int))]),
+                                   'originalEdgePresent': tuple(sorted((source_id, nid))) in all_edges,
+                                   'provenance': 'original-segmentation-fragment-endpoint'})
+                if len(candidates) == 3:
+                    break
+            generation = {'method': 'single-curated-fragment-pair' if len(candidates) == 1 else 'nearby-original-fragment-endpoints',
+                          'nearbyRadiusVoxels': NEARBY_RADIUS, 'maxCandidates': 1 if len(candidates) == 1 else 3,
+                          'endpointDefinition': 'degree one in the full seger-only graph',
+                          'order': 'curated pair' if len(candidates) == 1 else 'ascending Euclidean distance; one endpoint per distinct other fragment'}
+        for index, candidate in enumerate(candidates):
+            candidate.update(id=chr(ord('b')+index), label=chr(ord('B')+index),
+                             sourceVolumePosition=(np.array(candidate['position'])+origin).tolist(),
+                             intensityUnit='original-uint16', generationRank=index+1)
+        edges = sorted(edge for edge in original_edges if all(n in inside for n in edge))
+        spatial = {nid for nid, node in nodes.items() if np.all(node['position'] >= origin)
+                   and np.all(node['position'] < origin+SIZE)}
+        held_reviewer = [list(edge) for edge, creator in sorted(all_edges.items())
+                         if creator != 'seger' and all(n in spatial for n in edge)]
+        reference_edges = [{'sourceId': a, 'targetId': b, 'creator': all_edges[tuple(sorted((a, b)))]}
+                           for a, b in zip(task['reviewerPath'][:-1], task['reviewerPath'][1:])]
+        low, high = np.percentile(raw, [30, 99.95])
+        raw8 = np.rint(np.clip((raw.astype(np.float32)-low)/(high-low), 0, 1)*255).astype(np.uint8)
+        filename = task['id']+'-32-v3.u8.gz'
+        write_gzip(output/filename, raw8.transpose(2, 1, 0).tobytes())
+        first = candidates[0]
+        task.update(
+            candidates=candidates, candidateGeneration=generation, nearbyEndpointCount=len(nearby),
+            nearbyEndpointIds=nearby, allowsNone=task['taskType'] == 'point-proposal',
+            noneMeaning='true-ending' if task['taskType'] == 'point-proposal' else None,
+            allowsUncertain=True, centerReviewStatus='unchecked',
+            taskProvenance='curated-segmentation-fragment-replay',
+            volume=filename, shape=[SIZE]*3, origin=origin.tolist(), spacing=[1, 1, 1],
+            sourceVolume=source_info, compressedBytes=(output/filename).stat().st_size,
+            decodedBytes=int(raw8.nbytes),
+            intensityMapping={'method': 'linear-clipped-percentile', 'originalType': 'uint16', 'outputType': 'uint8',
+                              'low': float(low), 'high': float(high), 'percentiles': [30, 99.95],
+                              'originalCropMin': int(raw.min()), 'originalCropMax': int(raw.max()),
+                              'note': '8-bit display quantization only; candidate maxima are detected in original uint16 values.'},
+            nodes=[{'id': nid, 'position': (nodes[nid]['position']-origin).tolist(), 'component': fragments[nid]}
+                   for nid in sorted(inside)], edges=[list(edge) for edge in edges],
+            heldOutReviewerEdges=held_reviewer, reviewerPathEdges=reference_edges,
+            heldOutEdges=[sorted([source_id, candidate['nodeId']]) for candidate in candidates if candidate['nodeId'] is not None],
+            sourceDegree=1, sourceFragmentId=fragments[source_id], sourcePosition=source_local.tolist(),
+            historyNodeIds=history_ids, history=[(nodes[nid]['position']-origin).tolist() for nid in history_ids],
+            incomingVector=direction.tolist(),
+            replayState={'sourceChecked': 0, 'sourceState': 'unchecked', 'basis': 'simulated-pre-review',
+                         'savedSourceChecked': nodes[source_id]['checked'], 'initialGraph': 'original-segmentation-fragments'},
+            replayNote='Initial graph contains only original seger fragments. Unchecked state is simulated; the source DB remains unchanged.',
+            # Transitional aliases only. Runtime decisions must use candidates + selected candidate id.
+            targetId=first['nodeId'], targetPosition=first['position'], targetFragmentId=first.get('fragmentId'),
+            originalEdgePresent=first.get('originalEdgePresent', False),
+        )
         manifest['tasks'].append(task)
         if args.qa:
-            # Local QA projection, not required by the web page.
-            canvas=Image.new('RGB',(SIZE*3,SIZE));draw=ImageDraw.Draw(canvas)
-            for j,(axis,dims) in enumerate([(2,(0,1)),(1,(0,2)),(0,(1,2))]):
-                img=Image.fromarray(scaled.max(axis=axis).T).convert('RGB');canvas.paste(img,(SIZE*j,0))
-                for a,b in edges:
-                    pa=nodes[a]['position']-origin;pb=nodes[b]['position']-origin
-                    draw.line((pa[dims[0]]+SIZE*j,pa[dims[1]],pb[dims[0]]+SIZE*j,pb[dims[1]]),fill=(60,150,180),width=1)
-                pa=nodes[sid]['position']-origin;pb=nodes[tid]['position']-origin
-                draw.line((pa[dims[0]]+SIZE*j,pa[dims[1]],pb[dims[0]]+SIZE*j,pb[dims[1]]),fill=(255,180,60),width=1)
-                for p,color in [(pa,(50,220,255)),(pb,(255,170,60))]:
-                    x=p[dims[0]]+SIZE*j;y=p[dims[1]];draw.ellipse((x-1.5,y-1.5,x+1.5,y+1.5),fill=color)
-            canvas.resize((1152,384)).save(args.qa/(task['id']+'-qa.png'))
-    # Honest source-context proxy, max pooled 10x in all axes.
-    factor=10;coarse=np.asarray(volume).reshape(100,10,100,10,30,10).max(axis=(1,3,5))
-    low,high=np.percentile(coarse,[30,99.7]);overview=np.rint(np.clip((coarse.astype(np.float32)-low)/(high-low),0,1)*255).astype(np.uint8)
-    write_gzip(HERE/'overview.u8.gz',overview.transpose(2,1,0).tobytes())
-    manifest['overview']={'volume':'overview.u8.gz','shape':[100,100,30],'sourceShapeXYZ':list(volume.shape),'downsampleFactor':[factor]*3,'method':'10x10x10 maximum pooling','spacing':[factor]*3,'compressedBytes':(HERE/'overview.u8.gz').stat().st_size,'intensityMapping':{'low':float(low),'high':float(high)},'note':'This is the complete public sample block at reduced resolution, not a whole brain or a terabyte dataset.'}
-    for legacy_name in ('continuation.u8.gz', 'extension.u8.gz', 'crossing.u8.gz'):
-        (HERE / legacy_name).unlink(missing_ok=True)
-    (HERE/'manifest.json').write_text(json.dumps(manifest,separators=(',',':')))
-    con.close()
-    print(json.dumps({'source':source_info,'tasks':[{k:t[k] for k in ['id','origin','compressedBytes','sourceId','targetId','originalEdgePresent']}|{'nodes':len(t['nodes']),'edges':len(t['edges'])} for t in manifest['tasks']],'overviewBytes':manifest['overview']['compressedBytes']},indent=2))
-if __name__=='__main__':main()
+            qa_image(args.qa/(task['id']+'-qa.png'), raw8, task)
+    coarse = np.asarray(volume).reshape(100, 10, 100, 10, 30, 10).max(axis=(1, 3, 5))
+    low, high = np.percentile(coarse, [30, 99.7])
+    overview = np.rint(np.clip((coarse.astype(np.float32)-low)/(high-low), 0, 1)*255).astype(np.uint8)
+    write_gzip(output/'overview.u8.gz', overview.transpose(2, 1, 0).tobytes())
+    manifest['overview'] = {'volume': 'overview.u8.gz', 'shape': [100, 100, 30], 'sourceShapeXYZ': list(volume.shape),
+                            'downsampleFactor': [10]*3, 'method': '10x10x10 maximum pooling', 'spacing': [10]*3,
+                            'compressedBytes': (output/'overview.u8.gz').stat().st_size,
+                            'intensityMapping': {'low': float(low), 'high': float(high)},
+                            'note': 'Complete public sample block at reduced resolution, not a whole brain or a terabyte dataset.'}
+    for stem in ('continuation', 'extension', 'crossing'):
+        for suffix in ('.u8.gz', '-32.u8.gz'):
+            (output/(stem+suffix)).unlink(missing_ok=True)
+    (output/'manifest.json').write_text(json.dumps(manifest, separators=(',', ':')))
+    connection.close()
+    print(json.dumps({'revision': REVISION, 'tasks': [
+        {'id': task['id'], 'sourceId': task['sourceId'], 'nearbyEndpointCount': task['nearbyEndpointCount'],
+         'candidates': [{'id': c['id'], 'nodeId': c['nodeId'], 'position': c['position']} for c in task['candidates']],
+         'compressedBytes': task['compressedBytes'], 'nodes': len(task['nodes'])} for task in manifest['tasks']]}, indent=2))
+
+
+if __name__ == '__main__':
+    main()

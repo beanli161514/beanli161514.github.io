@@ -2,7 +2,7 @@
 
 Interactive GitHub Pages demo for Rubin Zhao's multiview mouse-ear reconstruction project.
 
-The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: a real WebGL 2 volume MIP, three local graph-review cases, and exportable attributed decisions demonstrating the data-engine workflow. The root remains the ear project.
+The same site also includes **[NeuroFly](neurofly/index.html)** at `/neurofly/`: a real WebGL 2 volume MIP, three task types for local graph review, and exportable attributed decisions demonstrating the data-engine workflow. The root remains the ear project.
 
 - Three selected B41 trials, six synchronized camera views, distortion-aware ear and face overlays.
 - Interactive 3D ear rims and facial landmarks, with calibrated camera frustums.
@@ -24,7 +24,9 @@ The output in `dist/` is a complete static site. Fonts, renderer, data, and medi
 
 See [the versioned data contract](public/DATA_FORMAT.md). Source ranges are zero-based, end-exclusive, and retain all 100 fps source frames. These assets are specific selected recording excerpts, not the complete dataset. The reconstruction code lives in [ear_recon](https://github.com/beanli161514/ear_recon).
 
-NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document the public 600 MB microscopy block, derived 32³ endpoint-centered crops, original segmentation fragments, coordinate layout, and the unresolved crossing example. The overview plus all three volumes total 104,410 bytes compressed; only requested crops are fetched. The 3D renderer combines maximum intensity ray casting with smooth, shaded sphere annotations at display resolution. It reduces volume sampling while dragging and renders only on interaction. Tasks use accept / reject / uncertain decisions, and exported records retain graph context, reviewer attribution, replay state, and dataset revision. No model inference, training, or annotation upload happens in the demo. Visitor labels stay in local browser storage and exported labels remain marked unverified.
+NeuroFly's [data contract and provenance](public/neurofly/DATA_FORMAT.md) document the public 600 MB microscopy block, 32³ endpoint-centered crops, original segmentation fragments, and reproducible candidate generation. The three tasks cover a connection decision between two fragments, selection among nearby fragment endpoints, and point proposals when no other fragment endpoints are nearby. Point proposals use the endpoint direction and local intensity maxima within a declared distance range. Choosing **None** in that task labels the source as a **true ending**; choosing **Uncertain** defers it without assigning a training target.
+
+Only requested crops and a small overview are fetched. The 3D renderer combines maximum intensity ray casting with shaded sphere annotations at display resolution, reducing volume sampling while dragging. Exported records retain the task type, full candidate set, chosen candidate or terminal label, graph context, reviewer attribution, replay state, and dataset revision. Candidate points join the graph only when selected. Reviews remain local to the browser and exported labels are marked unverified; no training or annotation upload runs in the demo.
 
 ## Publish
 
