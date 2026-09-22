@@ -212,9 +212,7 @@ async function boot(){
     const sizeMM=manifest.sourceVolume.shapeXYZ.map((n,i)=>n*manifest.sourceVolume.voxelSizeUM[i]/1000);
     const box=physicalBox(spec.illustrativeBlockCenterXYZ,sizeMM,spec.spacingMM);
     brain.setRegion(box.origin,box.size);brain.setScaleBar(2/spec.spacingMM[0],'2 mm');
-    brain.setContrast(Number($('brain-contrast').value));
-    $('brain-contrast').disabled=false;
-    $('brain-contrast').oninput=e=>brain.setContrast(Number(e.target.value));
+    brain.setContrast(.7);
     $('brain-view-reset').disabled=false;
     $('brain-view-reset').onclick=()=>brain.setView(spec.preferredView||'oblique');
     try{
@@ -227,19 +225,7 @@ async function boot(){
         return {...neuron,segments:neuron.edges.flatMap(([a,b])=>[...positions[a],...positions[b]])};
       });
       brain.setTraces(traces);
-      const selector=$('brain-neuron-select'),key=$('brain-neuron-key');
-      for(const trace of traces){
-        const option=document.createElement('option');option.value=trace.id;option.textContent=trace.label;selector.append(option);
-        const item=document.createElement('span'),dot=document.createElement('i');
-        dot.style.background=trace.color;item.append(dot,document.createTextNode(trace.label));item.dataset.neuron=trace.id;key.append(item);
-      }
-      const updateTraces=()=>{
-        brain.showTraces($('brain-neurons-toggle').checked,selector.value);
-        for(const item of key.children)item.classList.toggle('muted',!$('brain-neurons-toggle').checked||(selector.value!=='all'&&item.dataset.neuron!==selector.value));
-      };
-      selector.disabled=false;$('brain-neurons-toggle').disabled=false;
-      selector.onchange=updateTraces;$('brain-neurons-toggle').onchange=updateTraces;updateTraces();
-    }catch(error){$('brain-neuron-key').textContent='Neuron annotations could not load.';console.error(error);}
+    }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · T154 fluorescence. Neuron annotations could not load.';console.error(error);}
   }
   initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});
   initBrain().catch(error=>{$('brain-overview').textContent='Brain reference unavailable.';console.error(error);});

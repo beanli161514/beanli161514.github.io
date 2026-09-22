@@ -297,20 +297,6 @@ footer>div{gap:12px 20px}}
 .brain-region-key i{display:inline-block;flex:0 0 10px;width:10px;height:7px;border:1.5px solid #bca542;background:#d9c97518}
 .scale-arrow{font-size:22px;color:#91a8b6;text-align:center;align-self:center}
 .scale-note{font-size:9px;line-height:1.7;color:#8196a4;margin:9px 0 0;max-width:1000px}
-.brain-controls{display:flex;align-items:center;flex-wrap:wrap;gap:9px 17px;padding:11px 15px;background:#102432;border-top:1px solid #203744;color:#97b1c2}
-.brain-controls .check{font-size:9px;flex-shrink:0}
-.neuron-selector{display:flex;align-items:center;gap:7px;font-size:9px;min-width:0}
-.neuron-selector select{min-width:110px;max-width:185px;font:9px 'DM Sans',sans-serif;color:#b5d0df;border:1px solid #3a586b;border-radius:4px;background:#163244;padding:5px 7px;cursor:pointer}
-.neuron-selector select:focus-visible{outline:3px solid #209fce;outline-offset:3px}
-.brain-contrast-control{display:flex;align-items:center;gap:9px;flex:1 1 175px;min-width:160px;font-size:9px}
-.brain-contrast-control>span{white-space:nowrap}
-.brain-contrast-control input{width:100%;min-width:45px;height:11px;margin:0;accent-color:#63b8d1;cursor:pointer}
-.overview-hint{font-size:8px;line-height:1.5;color:#668da5}
-.brain-neuron-key{display:flex;align-items:center;flex-wrap:wrap;gap:8px 15px;padding:0 15px 11px;background:#102432;color:#9eb7c8;font:8px/1.5 var(--mono)}
-.brain-neuron-key:empty{display:none}
-.brain-neuron-key>span{display:inline-flex;align-items:center;gap:6px}
-.brain-neuron-key>span.muted{opacity:.3}
-.brain-neuron-key i{display:inline-block;flex:0 0 11px;width:11px;height:2px;background:var(--neuron-color,#8bc4d4)}
 .task-size{font:10px var(--mono);letter-spacing:0;color:#8a9fab;margin-left:11px;white-space:nowrap}
 .session-controls{display:flex;align-items:center;justify-content:flex-end;gap:18px;flex-shrink:0}
 .session-controls .text-button{font-size:9px;color:#658397;border:1px solid #cedee7;border-radius:4px;padding:7px 9px;white-space:nowrap}
@@ -321,10 +307,6 @@ footer{margin-top:29px}
   .overview-heading{padding:10px 12px;gap:10px}
   .overview-heading h3 span{display:block;margin-left:0;font-size:8px}
   .overview-dimension{font-size:7px}
-  .brain-controls{gap:9px 14px;padding:10px 12px}
-  .brain-neuron-key{padding:0 12px 10px;gap:7px 12px}
-  .brain-contrast-control{flex-basis:180px}
-  .overview-hint{flex-basis:100%}
   .scale-copy{padding:11px 12px}
   .session-controls{gap:12px}
 }
@@ -354,11 +336,6 @@ footer{margin-top:29px}
   .overview-heading .text-button{font-size:9px}
   .overview-dimension{display:block;font-size:8px}
   .scale-arrow{line-height:16px;transform:rotate(90deg);justify-self:center}
-  .brain-controls{padding:11px 14px;gap:10px 16px}
-  .brain-neuron-key{padding:0 14px 11px;font-size:8px}
-  .brain-contrast-control{flex:1 1 100%}
-  .neuron-selector select{max-width:190px}
-  .overview-hint{flex-basis:auto}
   .scale-copy{padding:11px 14px}
   .scale-copy p{font-size:10px;line-height:1.65}
   .scale-copy .brain-region-key{font-size:9px}
@@ -377,3 +354,4 @@ footer{margin-top:29px}
   .overview-heading h3 span{font-size:8px}
   .task-size{display:block;margin:4px 0 0}
 }
+.scale-preview .orbit-hint{z-index:1}
