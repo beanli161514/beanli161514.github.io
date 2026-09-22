@@ -66,7 +66,7 @@ for index,(start,end) in enumerate(ranges,1):
     filename=f'trial-{index}'
     (out/f'{filename}.filled.f32.gz').write_bytes(gzip.compress(track.tobytes(),mtime=0))
     manifest['trials'].append(dict(id=filename, label=f'Trial {index:02d}',start=start,end=end,
-        frames=count,video=f'{filename}.mp4',track=f'{filename}.filled.f32.gz',poster=f'{filename}.jpg',
+        frames=count,video=f'{filename}.web.mp4',track=f'{filename}.filled.f32.gz',poster=f'{filename}.jpg',
         faceInterpolation=interpolation_metadata(face_filled,start,end)))
     # OpenCV reference projections for independent browser-math regression checks.
     for cam in manifest['cameras']:
@@ -77,8 +77,8 @@ for index,(start,end) in enumerate(ranges,1):
     caps=[open_video(video_paths[name],frame=start) for name in order]
     proc=subprocess.Popen(['ffmpeg','-hide_banner','-loglevel','error','-y',
         '-f','rawvideo','-pix_fmt','bgr24','-s','1440x768','-r',str(fps),'-i','pipe:0',
-        '-an','-c:v','libx264','-preset','fast','-crf','23','-pix_fmt','yuv420p',
-        '-g','25','-movflags','+faststart',str(out/f'{filename}.mp4')],stdin=subprocess.PIPE)
+        '-an','-c:v','libx264','-preset','slow','-crf','28','-pix_fmt','yuv420p',
+        '-g','50','-movflags','+faststart',str(out/f'{filename}.web.mp4')],stdin=subprocess.PIPE)
     try:
         for local in range(count):
             tiles=[]

@@ -93,7 +93,8 @@ async function selectTrial(selected){
       const cleanup=()=>{video.removeEventListener('loadeddata',done);video.removeEventListener('error',fail);};
       video.addEventListener('loadeddata',done,{once:true});video.addEventListener('error',fail,{once:true});
     });
-    video.src=dataURL(selected.video);video.poster=dataURL(selected.poster);video.load();video.playbackRate=Number($('speed').value);
+    // Only the decoded canvas is visible; a hidden video poster would waste bandwidth.
+    video.src=dataURL(selected.video);video.load();video.playbackRate=Number($('speed').value);
     const [data]=await Promise.all([getTrack(selected),videoReady]);
     if(version!==loadVersion)return;
     track=data;ready=true;draw(0);fitView();$('loading').hidden=true;$('play').disabled=false;$('timeline').disabled=false;
