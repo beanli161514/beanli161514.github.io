@@ -355,3 +355,101 @@ footer{margin-top:29px}
   .task-size{display:block;margin:4px 0 0}
 }
 .scale-preview .orbit-hint{z-index:1}
+
+/* Recorded tracing and its proposed structured supervision interface. */
+.training-section{margin-top:34px;padding-top:26px;border-top:1px solid var(--line)}
+.training-intro{margin:12px 0 20px;font-size:12px;line-height:1.8;color:#708796}
+.training-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:23px;align-items:start}
+.rollout-panel,.model-interface{overflow:hidden;min-width:0;border:1px solid #cbdce6;border-radius:7px;background:#edf3f6}
+.training-panel-heading{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid #cfdee8;background:#e7f0f5}
+.training-panel-heading h3{margin:0;font-size:12px;font-weight:600;color:#365e75}
+.training-panel-heading>span{font:8px/1.5 var(--mono);color:#7892a3;text-align:right}
+#training-rollout{display:block;width:100%;height:auto;aspect-ratio:540/512;max-height:520px;object-fit:contain;background:#08121b}
+.rollout-caption{margin:0;padding:13px 16px;font-size:10px;line-height:1.8;color:#7c919f}
+.training-model-column{min-width:0;display:grid;gap:14px}
+.model-diagram{padding:17px 19px 18px}
+.model-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;align-items:stretch}
+.model-input{display:flex;flex-direction:column;align-items:center;min-width:0;text-align:center;color:#638296}
+.model-input>span:first-child{display:grid;place-items:center;min-height:30px;font-size:10px;line-height:1.55}
+.model-input .token-arrow{font-size:14px;line-height:1.2;color:#9cb4c3;margin:3px 0 5px}
+.model-input strong{display:grid;place-items:center;min-height:34px;align-self:stretch;padding:6px 8px;border:1px solid #b7d0df;border-radius:4px;background:#f8fbfc;font-size:10px;line-height:1.4;font-weight:500;color:#4c7892}
+.model-merge{position:relative;margin:0 calc(100% / 6) 0;height:27px;border-right:1px solid #bdd0dd;border-left:1px solid #bdd0dd;border-bottom:1px solid #bdd0dd}
+.model-merge:before{content:'';position:absolute;left:50%;top:0;bottom:0;width:1px;background:#bdd0dd}
+.model-merge>span{position:absolute;left:50%;bottom:-15px;transform:translateX(-50%);font:17px/1 var(--mono);color:#8aa8ba;z-index:1}
+.transformer-block{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 16px;min-height:55px;margin-top:14px;padding:10px 13px;border:1px solid #88aec3;border-radius:5px;background:#dcebf3;text-align:center}
+.transformer-block>strong{font-size:13px;font-weight:600;color:#315e79}
+.transformer-block>span{padding:5px 8px;font-size:8px;line-height:1.4;border:1px dashed #99b8cb;border-radius:3px;color:#67879a;background:#eaf3f8}
+.model-flow-arrow{font:18px/1 var(--mono);color:#8aa8ba;text-align:center;margin:7px 0}
+.action-head{padding:12px 13px;border:1px solid #c1d5e2;border-radius:5px;background:#f5f9fb}
+.action-head h4{font-size:10px;font-weight:600;color:#4e758c;margin:0 0 9px}
+.head-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 9px;border:1px solid transparent;border-radius:4px;color:#8098a7;font-size:10px;line-height:1.45}
+.head-row+.head-row{margin-top:2px}
+.head-row strong{font:9px/1.5 var(--mono);font-weight:400;color:#758e9e;white-space:nowrap}
+.head-row.active,.head-row[aria-current=true]{border-color:#8eb8ce;background:#e2eff6;color:#2a6a8b}
+.head-row.active strong,.head-row[aria-current=true] strong{color:#387d9e}
+.training-learning-note{border-top:1px solid #d5e2ea;margin:0;padding:11px 18px;font-size:10px;line-height:1.75;color:#7691a2;background:#eaf2f6}
+.training-example{border:1px solid #cbdce6;border-radius:7px;padding:15px 17px;background:#f8fbfc;min-width:0}
+.training-example-heading{display:flex;align-items:baseline;justify-content:space-between;gap:14px;margin-bottom:12px}
+.training-example-heading h3{margin:0;font-size:11px;font-weight:600;line-height:1.5;color:#3c647b}
+.training-example-heading a{font-size:9px;line-height:1.6;color:#5183a0;text-align:right;white-space:nowrap}
+.training-task{font-size:11px;color:#5c7c91;margin:0 0 5px;line-height:1.6}
+.training-input-summary{font:9px/1.7 var(--mono);color:#8a9fac;margin:0 0 12px;overflow-wrap:anywhere}
+.training-label{display:flex;align-items:baseline;gap:13px;border-top:1px solid #dde8ee;padding-top:11px}
+.training-label>span{font-size:9px;color:#91a3af;white-space:nowrap}
+#training-target{font-size:13px;font-weight:600;line-height:1.6;color:#337493;overflow-wrap:anywhere;min-width:0}
+.training-target-detail{font-size:10px;line-height:1.75;color:#7892a3;margin:6px 0 0}
+.training-status{font:8px/1.6 var(--mono);color:#8ba0ad;margin:9px 0 0}
+.training-example[data-state=deferred] #training-target{color:#927ba8}
+.training-note{font-size:9px;line-height:1.75;color:#8a9eaa;margin:11px 0 0}
+@media(max-width:1100px){
+  .training-grid{gap:17px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .training-panel-heading{padding:12px 13px}
+  .model-diagram{padding:15px 14px}
+  .model-inputs{gap:8px}
+  .model-input strong{font-size:9px;padding:6px}
+  .model-input>span:first-child{font-size:9px}
+  .head-row{font-size:9px;padding:8px 7px}
+  .head-row strong{font-size:8px}
+  .training-example{padding:14px}
+  .training-example-heading{display:block}
+  .training-example-heading a{display:inline-block;margin-top:5px;text-align:left}
+}
+@media(max-width:900px){
+  .training-grid{grid-template-columns:1fr;gap:17px}
+  #training-rollout{max-height:470px}
+  .model-diagram{padding:18px 22px}
+  .model-inputs{gap:15px}
+  .model-input>span:first-child,.model-input strong{font-size:11px}
+  .head-row{font-size:11px}
+  .head-row strong{font-size:10px}
+  .training-example-heading{display:flex}
+  .training-example-heading a{margin-top:0}
+}
+@media(max-width:650px){
+  .training-section{margin-top:28px;padding-top:22px}
+  #training-title{font-size:18px;line-height:1.45}
+  .training-intro{font-size:11px;margin:11px 0 17px}
+  .training-grid{gap:14px}
+  .training-panel-heading{gap:10px;padding:12px 13px}
+  .training-panel-heading h3{font-size:11px}
+  .training-panel-heading>span{font-size:7px}
+  .rollout-caption{font-size:10px;padding:11px 13px}
+  .model-diagram{padding:14px 13px}
+  .model-inputs{gap:7px}
+  .model-input>span:first-child{font-size:10px;min-height:32px}
+  .model-input strong{font-size:10px;min-height:40px;padding:6px 5px}
+  .transformer-block{gap:7px;padding:10px;min-height:66px}
+  .transformer-block>strong{font-size:12px}
+  .transformer-block>span{font-size:8px}
+  .action-head{padding:11px 9px}
+  .head-row{font-size:10px;padding:8px 6px;gap:8px}
+  .head-row strong{font-size:9px}
+  .training-example{padding:13px}
+  .training-example-heading{display:block;margin-bottom:11px}
+  .training-example-heading h3{font-size:11px}
+  .training-example-heading a{display:inline-block;margin-top:5px;font-size:9px}
+  .training-task{font-size:10px}
+  .training-input-summary{font-size:8px}
+  .training-note{font-size:8px}
+  .training-learning-note{font-size:9px;padding:10px 13px}
+}

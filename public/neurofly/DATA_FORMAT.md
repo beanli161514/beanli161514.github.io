@@ -68,6 +68,18 @@ For the selected point-proposal crop, B/C/D are local `[8,18,14]`, `[12,20,14]`,
 
 The page stores a structured local record containing the task type, source, candidate set, selected candidate ID (if any), decision, review status and graph operation. Candidate endpoint selection and image-point proposal remain distinct operations. Records use `validation: "unverified-demo-review"`. An uncertain choice defers the case and leaves graph topology unchanged. The records remain in browser storage; **Reset session** clears them. The page does not expose a record-export button. This illustrates how standardized actions can support review and model-development queues; it is not online learning or automatic ingestion of public visitors' labels into training data.
 
+## Training illustration
+
+`src/neurofly-training.js` converts the selected task and a validated local review record into a candidate observation–action pair. Inputs reference the uint8 demo crop, its shape/origin/calibration, the ordered trajectory history, the initial fragment graph, and candidate IDs, kinds and coordinates. All coordinates are crop-local XYZ voxels. No reference answer, held-out reviewer edge, or post-decision graph is included in the observation.
+
+The action space depends on the task: `[connect:B, reject-edge:B]` for binary connection; one `connect:<candidate>` class per endpoint; or one `extend:<candidate>` class per proposed point plus `stop` for None. The target stores the class index, stable action ID, operation, and candidate geometry where applicable. Rejecting an edge does not mark a true ending. Unselected candidates do not become permanent negative graph edges. Uncertain reviews retain no target. Task, candidate and revision mismatches are rejected before conversion, and decisive browser reviews retain `requires-validation` status.
+
+The page shows these pairs as a supervision illustration, with no training or inference service. Its candidate tokens and structured action head are a proposed extension of NeuroFly's image/trajectory two-way attention model. The existing model predicts a 3D displacement from five trajectory positions and a rank/intensity image representation; the variable-length history and uint8 display crops here are not claimed to be its checkpoint-ready training tensors.
+
+`media/autonomous-extension.mp4` is a 10.1-second, 101-frame recording converted from [NeuroFly's autonomous.gif](https://github.com/beanli161514/neurofly/blob/f32e7b3/assets/autonomous.gif). It shows recorded model-guided extension in desktop NeuroFly, not live browser inference. The 540 × 511 source is padded by one bottom pixel to 540 × 512 for H.264, at its original 10 fps. The 779,783-byte video has a fast-start header; its 24,982-byte WebP poster is shown before playback. The video loads when visible, loops with native playback/scrubbing controls, pauses offscreen or in a hidden tab, and respects reduced-motion preferences for automatic playback.
+
+SHA256: source GIF `c176524aa6631ebfefee3a2658d37b013775bd96a59b018ee4d330829934977f`; MP4 `19194b81b1860699e80ba78429be775fb718938cd9944de0690b9179f123d70b`; poster `52812ff8b3edf56c5b8b9e8f8d36f2f9afae6f4663da69def592c7db8e63e66e`.
+
 ## Reproduce
 
 Run from the source repository. The source directory must contain the publicly released `RM009_axons_2.tif` and corresponding `RM009_axons_2.db` (or its verified geometry-equivalent working copy).

@@ -80,6 +80,50 @@
       <p class="viewer-note">Points and edges share the image volume’s 3D coordinate system. In point-proposal tasks, selecting None marks source endpoint A as a true ending; it does not mean the evidence is uncertain.</p>
     </section>
 
+    <section id="training" class="training-section" aria-labelledby="training-title">
+      <div class="section-heading"><h2 id="training-title">From reviewed decisions to automated tracing</h2></div>
+      <p class="training-intro">A reviewed local decision supplies a structured action label for its image and trajectory context.</p>
+      <div class="training-grid">
+        <article class="rollout-panel" aria-labelledby="rollout-title">
+          <div class="training-panel-heading"><h3 id="rollout-title">Model-guided extension</h3><span>Recorded rollout</span></div>
+          <video id="training-rollout" src="./media/autonomous-extension.mp4" poster="./media/autonomous-extension-poster.webp" loop muted playsinline controls preload="none" aria-label="Recorded model-guided neuron extension rollout"></video>
+          <p class="rollout-caption">Recorded model rollout predicting successive 3D positions (Δxyz). The proposed structured head extends the action interface to the three local review tasks.</p>
+        </article>
+
+        <div class="training-model-column">
+          <article class="model-interface" aria-labelledby="model-interface-title">
+            <div class="training-panel-heading"><h3 id="model-interface-title">Model interface</h3><span>Proposed action interface</span></div>
+            <div class="model-diagram" aria-label="Image, trajectory and candidate tokens feed a two-way Transformer with a learnable action query, followed by a structured action head">
+              <div class="model-inputs">
+                <div class="model-input"><span>32³ image</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Image tokens</strong></div>
+                <div class="model-input"><span>Trajectory history</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Trajectory tokens</strong></div>
+                <div class="model-input"><span>Task + candidates</span><span class="token-arrow" aria-hidden="true">↓</span><strong>Candidate tokens</strong></div>
+              </div>
+              <div class="model-merge" aria-hidden="true"><span>↓</span></div>
+              <div class="transformer-block"><strong>Two-way Transformer</strong><span>Learnable action query</span></div>
+              <div class="model-flow-arrow" aria-hidden="true">↓</div>
+              <div class="action-head"><h4>Structured action head</h4>
+                <div id="training-head-connection" class="head-row" data-head="fragment-connection"><span>Connect fragments</span><strong>Accept / Reject</strong></div>
+                <div id="training-head-endpoint" class="head-row" data-head="endpoint-selection"><span>Select an endpoint</span><strong>B / C / D</strong></div>
+                <div id="training-head-extension" class="head-row" data-head="point-proposal"><span>Extend or stop</span><strong>B / C / D / None</strong></div>
+              </div>
+            </div>
+            <p class="training-learning-note">Curated labels supervise the action head. At inference, the model applies an action, updates the graph, and repeats with the next local window.</p>
+          </article>
+
+          <article id="training-example" class="training-example" aria-live="polite" aria-atomic="true" aria-labelledby="training-example-title">
+            <div class="training-example-heading"><h3 id="training-example-title">Supervision from the current task</h3><a href="#task-workspace">Change local decision ↑</a></div>
+            <p id="training-task" class="training-task">Choose a decision above.</p>
+            <p id="training-input-summary" class="training-input-summary">Local image + trajectory history + task candidates</p>
+            <div class="training-label"><span>Action label</span><strong id="training-target">Awaiting a decision</strong></div>
+            <p id="training-target-detail" class="training-target-detail">The selected action will appear here with its task context.</p>
+            <p id="training-status" class="training-status">Pending review</p>
+          </article>
+        </div>
+      </div>
+      <p class="training-note">Uncertain cases are deferred and excluded from action labels. These browser examples illustrate supervision pending curation; they do not train a model.</p>
+    </section>
+
   </main>
 
   <footer><span>Rubin Zhao · NeuroFly research demo</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">RM009 local data · CC BY 4.0 ↗</a><a href="./DATA_FORMAT.md">T154 mouse overview &amp; annotations · provenance ↗</a><a href="/">Ear reconstruction ↗</a></div></footer>

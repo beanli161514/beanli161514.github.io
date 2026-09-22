@@ -2,6 +2,7 @@ import {gunzipSync} from 'fflate';
 import {VolumeView,CANDIDATE_COLORS} from './neurofly-volume.js';
 import {makeReview,summarizeReviews,graphEdgesAfterReview} from './neurofly-review.js';
 import {transformXYZ,physicalBox} from './neurofly-scale.js';
+import {renderTrainingExample,initTrainingRollout} from './neurofly-training-view.js';
 
 const $=id=>document.getElementById(id);
 const dataRoot=new URL('./data/',window.location.href);
@@ -147,6 +148,7 @@ async function boot(){
     document.documentElement.dataset.task=task.id;
     document.documentElement.dataset.taskType=task.taskType;
     document.documentElement.dataset.decision=record?.decision||'pending';
+    renderTrainingExample(task,record);
   }
 
   async function selectTask(nextIndex){
@@ -188,7 +190,7 @@ async function boot(){
   $('depth').oninput=e=>view.setDepth(Number(e.target.value));
   $('annotations-toggle').onchange=e=>view.setAnnotations(e.target.checked);
   window.addEventListener('keydown',event=>{
-    if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName))return;
+    if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA','VIDEO'].includes(event.target.tagName))return;
     const choice=choicesFor(tasks[index])[Number(event.key)-1];
     if(/^[1-9]$/.test(event.key)&&choice){event.preventDefault();review(choice.decision,choice.candidateId);}
   });
@@ -233,6 +235,7 @@ async function boot(){
   await selectTask(0);
 }
 
+initTrainingRollout();
 boot().catch(error=>{
   $('volume-status').hidden=false;$('volume-status').textContent=error.message;
   for(const button of document.querySelectorAll('#decision-actions button, #next-task'))button.disabled=true;
