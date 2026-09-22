@@ -19,9 +19,9 @@ Source: `20250110_B41_USV_awake_000_17-57-18`. Source frames are zero-based. Ran
 
 | Trial | Source range | Frames | Duration |
 |---|---:|---:|---:|
+| 03 (default) | [13400, 13650) | 250 | 2.50 s |
 | 01 | [16300, 16800) | 500 | 5.00 s |
 | 02 | [46700, 47000) | 300 | 3.00 s |
-| 03 | [13400, 13650) | 250 | 2.50 s |
 
 Every source frame is retained. Video frame `i`, geometry frame `i`, and source frame `start + i` are the same instant. The MP4 starts at time zero, at 100 fps, with no audio. `floor(mediaTime * fps + 1e-5)` selects a frame, clamped to `[0, frames-1]`. Seeking targets the interior of a frame interval. Playback uses `requestVideoFrameCallback` when supported. The video image and 2D overlays are painted together into one canvas; the same frame updates the 3D scene. Slower displays may skip presented frames, but the views share the same clock. A `requestAnimationFrame`/`currentTime` fallback is provided for older browsers and does not have decoded-frame timestamp precision.
 

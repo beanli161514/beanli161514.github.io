@@ -94,6 +94,8 @@ for index,(start,end) in enumerate(ranges,1):
         proc.stdin.close()
     if proc.wait(): raise RuntimeError('ffmpeg failed')
     print(f'{filename} exported; finite geometry {np.isfinite(track).mean():.3%}',flush=True)
+# Trial identities stay stable; the preferred clip is shown and loaded first.
+manifest['trials'].sort(key=lambda t: ['trial-3', 'trial-1', 'trial-2'].index(t['id']))
 (out/'manifest.json').write_text(json.dumps(manifest,separators=(',',':')))
 model_path=args.repo/'weights/ear_pca_sim3_global_10mouse_pc15.npz'
 models={}
