@@ -157,7 +157,7 @@ async function boot(){
     $('task-kind').textContent=typeNames[task.taskType];
     $('task-title').textContent=task.prompt;
     $('task-context').textContent=task.context;
-    $('task-source').textContent=`${task.sourceVolume.species} · ${task.sourceVolume.imaging} · 1 µm/voxel`;
+    $('task-source').textContent=`${task.sourceVolume.imaging} · 1 µm/voxel`;
     $('task-size').textContent=`${task.shape.map((n,i)=>n*task.sourceVolume.voxelSizeUM[i]).join(' × ')} µm`;
     $('contrast').value=1;$('depth').value=1;
     renderChoices(task);updateReview();setRegion(task);
@@ -226,7 +226,7 @@ async function boot(){
         return {...neuron,segments:neuron.edges.flatMap(([a,b])=>[...positions[a],...positions[b]])};
       });
       brain.setTraces(traces);
-    }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · T154 fluorescence. Neuron annotations could not load.';console.error(error);}
+    }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · fluorescence microscopy. Neuron annotations could not load.';console.error(error);}
     brain.enableAutoRotation();
   }
   initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});

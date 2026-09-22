@@ -22,7 +22,7 @@
       <div class="intro-main">
         <h1 id="page-title">Scalable Annotation for Connectome Construction</h1>
         <p class="author">Rubin Zhao</p>
-        <p class="dek">A data engine that turns neuron reconstruction into structured decisions and traceable training data. Explore reconstructed neurons across a mouse brain, then review connections using local 3D image context.</p>
+        <p class="dek">A data engine that turns neuron reconstruction into structured decisions and traceable training data. Explore reconstructed neurons across a whole brain, then review connections using local 3D image context.</p>
       </div>
     </section>
 
@@ -30,18 +30,18 @@
       <h2 id="scale-title">From whole brain to a local task</h2>
       <div class="scale-views">
         <article class="scale-card brain-card" aria-labelledby="brain-title">
-          <div class="overview-heading"><h3 id="brain-title">Whole brain <span>T154 · mouse</span></h3><button id="brain-view-reset" class="text-button" type="button">Reset view ↺</button></div>
-          <div id="brain-overview" class="scale-preview" aria-label="T154 mouse whole-brain microscopy with individual neuron annotations"><span class="orbit-hint">Drag to rotate · scroll to zoom</span></div>
-          <div class="scale-copy"><p id="brain-caption">12 × 8 × 13.2 mm · T154 fluorescence. Colored lines show six annotated neurons.</p><p class="brain-region-key"><i aria-hidden="true"></i>1 × 1 × 0.3 mm box · illustrative position</p></div>
+          <div class="overview-heading"><h3 id="brain-title">Whole brain</h3><button id="brain-view-reset" class="text-button" type="button">Reset view ↺</button></div>
+          <div id="brain-overview" class="scale-preview" aria-label="Whole-brain microscopy with individual neuron annotations"><span class="orbit-hint">Drag to rotate · scroll to zoom</span></div>
+          <div class="scale-copy"><p id="brain-caption">12 × 8 × 13.2 mm · fluorescence microscopy. Colored lines show six annotated neurons.</p><p class="brain-region-key"><i aria-hidden="true"></i>1 × 1 × 0.3 mm box · illustrative position</p></div>
         </article>
         <span class="scale-arrow" aria-hidden="true">→</span>
         <article class="scale-card block-card" aria-labelledby="block-title">
-          <div class="overview-heading"><h3 id="block-title">Image block <span>RM009 · macaque</span></h3><span class="overview-dimension">1 × 1 × 0.3 mm</span></div>
+          <div class="overview-heading"><h3 id="block-title">Image block</h3><span class="overview-dimension">1 × 1 × 0.3 mm</span></div>
           <div id="scale-overview" class="scale-preview" aria-label="Image block and location of the current review window"></div>
           <div class="scale-copy"><p id="scale-caption">The highlighted window locates the current task.</p></div>
         </article>
       </div>
-      <p id="scale-note" class="scale-note">T154 mouse and RM009 macaque are separate acquisitions. The yellow box has the block’s physical size; its position in the brain is illustrative.</p>
+      <p id="scale-note" class="scale-note">The yellow box has the block’s physical size; its position in the brain is illustrative.</p>
     </section>
 
     <section id="task-workspace" class="workspace" aria-labelledby="workspace-title">
@@ -158,7 +158,7 @@
 
   </main>
 
-  <footer><span>Rubin Zhao · NeuroFly research demo</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">RM009 local data · CC BY 4.0 ↗</a><a href="./DATA_FORMAT.md">T154 mouse overview &amp; annotations · provenance ↗</a><a href="/ear/">Ear Reconstruction ↗</a></div></footer>
+  <footer><span>Rubin Zhao · NeuroFly research demo</span><div><a href="https://zenodo.org/records/13328867" target="_blank" rel="noreferrer">Local image data · CC BY 4.0 ↗</a><a href="./DATA_FORMAT.md">Whole-brain data &amp; annotations · provenance ↗</a><a href="/ear/">Ear Reconstruction ↗</a></div></footer>
   <noscript><p class="noscript">Enable JavaScript to explore the 3D volume and review workflow.</p></noscript>
   <script type="module" src="/src/neurofly.js"></script>
 </body>
