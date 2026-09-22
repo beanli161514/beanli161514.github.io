@@ -1,12 +1,13 @@
-# Rubin Zhao · Research demos
+# Rubin Zhao · Projects
 
-Two independent interactive research pages share a neutral project index and a consistent academic layout.
+Two interactive research pages and a physical-design page share a neutral project index and a consistent layout.
 
 | Page | Published URL | Source entry |
 | --- | --- | --- |
-| Research projects | [beanli161514.github.io](https://beanli161514.github.io/) | [index.html](index.html) |
+| Projects | [beanli161514.github.io](https://beanli161514.github.io/) | [index.html](index.html) |
 | 3D Ear Reconstruction | [/ear/](https://beanli161514.github.io/ear/) | [ear/index.html](ear/index.html) |
 | Scalable Annotation for Connectome Construction · NeuroFly | [/neurofly/](https://beanli161514.github.io/neurofly/) | [neurofly/index.html](neurofly/index.html) |
+| Double Helix | [/double-helix/](https://beanli161514.github.io/double-helix/) | [double-helix/index.html](double-helix/index.html) |
 
 The ear page provides:
 
@@ -17,6 +18,8 @@ The ear page provides:
 
 The NeuroFly page provides WebGL 2 volume MIP views, annotated neurons in a T154 whole mouse brain, three task types for local graph review, and a structured-action tracing walkthrough.
 
+The Double Helix page pairs five photographs with an interactive viewer for the original body and cap designs. Compact GLB files retain the source mesh geometry; STL downloads are fetched only when requested. Photo assets are resized, converted to sRGB, and stripped of metadata. The 3D view supports mouse, touch, and keyboard controls, with slow rotation that pauses during interaction, offscreen, and in hidden tabs; reduced-motion preferences disable automatic rotation initially.
+
 ## Develop
 
 ```
@@ -26,7 +29,7 @@ npm test
 npm run build
 ```
 
-Open the development server's `/` project index, `/ear/`, or `/neurofly/`. Vite builds all three HTML entries into the matching paths in `dist/`.
+Open the development server's `/` project index, `/ear/`, `/neurofly/`, or `/double-helix/`. Vite builds all four HTML entries into the matching paths in `dist/`.
 
 The output in `dist/` is a complete static site. Fonts, renderer, data, and media are hosted together; no runtime CDN or server is required. A recent browser with WebGL2 is recommended. In the ear demo, a slower display can skip presented frames; all views use one video clock.
 
@@ -46,4 +49,4 @@ Rebuild the T154 assets with [`export_t154_brain.py`](scripts/export_t154_brain.
 
 ## Publish
 
-`npm run build` produces the project index and both project pages. Publish the complete `dist/` tree so `/ear/`, `/neurofly/`, and both asset directories stay available. The `gh-pages` branch contains only the built site and `.nojekyll`; GitHub Pages publishes that branch's root. The `main` branch contains this source, exporters, tests, and assets. Update the build and push `gh-pages` when changing the published site.
+`npm run build` produces the project index and all project pages. Publish the complete `dist/` tree so `/ear/`, `/neurofly/`, `/double-helix/`, and their asset directories stay available. The `gh-pages` branch contains only the built site and `.nojekyll`; GitHub Pages publishes that branch's root. The `main` branch contains this source, exporters, tests, and assets. Update the build and push `gh-pages` when changing the published site.

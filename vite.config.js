@@ -8,6 +8,7 @@ export default defineConfig({
         projects: fileURLToPath(new URL('./index.html', import.meta.url)),
         ear: fileURLToPath(new URL('./ear/index.html', import.meta.url)),
         neurofly: fileURLToPath(new URL('./neurofly/index.html', import.meta.url)),
+        helix: fileURLToPath(new URL('./double-helix/index.html', import.meta.url)),
       },
     },
   },
