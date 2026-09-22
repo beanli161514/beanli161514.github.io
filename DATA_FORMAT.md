@@ -5,11 +5,11 @@ A trial consists of one synchronized MP4 and one compressed 3D array. A shared m
 ```
 data/
   manifest.json           # timeline, cameras, point layout, trial list
-  trial-1.mp4             # BC L R / TC TL TR, 1440 × 768, 100 fps
+  trial-1.web.mp4         # BC L R / TC TL TR, 1440 × 768, 100 fps
   trial-1.filled.f32.gz          # gzip-compressed float32 XYZ, little endian
-  trial-1.jpg             # first-frame poster
-  trial-2.{mp4,filled.f32.gz,jpg}
-  trial-3.{mp4,filled.f32.gz,jpg}
+  trial-1.jpg             # optional first-frame preview; not fetched by the viewer
+  trial-2.{web.mp4,filled.f32.gz,jpg}
+  trial-3.{web.mp4,filled.f32.gz,jpg}
   shape-model.json        # left/right mean curves and 15 PCA displacement modes
 ```
 
@@ -24,6 +24,8 @@ Source: `20250110_B41_USV_awake_000_17-57-18`. Source frames are zero-based. Ran
 | 02 | [46700, 47000) | 300 | 3.00 s |
 
 Every source frame is retained. Video frame `i`, geometry frame `i`, and source frame `start + i` are the same instant. The MP4 starts at time zero, at 100 fps, with no audio. `floor(mediaTime * fps + 1e-5)` selects a frame, clamped to `[0, frames-1]`. Seeking targets the interior of a frame interval. Playback uses `requestVideoFrameCallback` when supported. The video image and 2D overlays are painted together into one canvas; the same frame updates the 3D scene. Slower displays may skip presented frames, but the views share the same clock. A `requestAnimationFrame`/`currentTime` fallback is provided for older browsers and does not have decoded-frame timestamp precision.
+
+Videos use H.264 (`libx264`, slow preset, CRF 28, `yuv420p`), with a maximum keyframe interval of 50 frames (0.5 s) for timeline seeking. MP4 metadata is placed before media data (`+faststart`) so playback can begin before the whole clip is downloaded. Compression retains the 1440 × 768 resolution and all source timestamps; the independent 3D tracks are unchanged. Only the selected trial's video and track are requested. The viewer does not fetch the optional poster images.
 
 ## Track layout
 
