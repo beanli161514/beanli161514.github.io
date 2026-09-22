@@ -17,7 +17,7 @@ PUBLISHED_DB_MD5 = 'df076171651054f04026a6e360fba765'
 # Derived from the public Zenodo database whose MD5 is above; review flags excluded.
 PUBLISHED_GEOMETRY_SHA256 = '7f194483dbb7ac8052e5b54542eac9c15c7b903dc7b447be970e0adcfabf385a'
 NAME = 'RM009_axons_2'
-SIZE = 96
+SIZE = 32
 
 def decode_coord(value):
     return np.array(ast.literal_eval(value.decode() if isinstance(value, bytes) else value),dtype=float)
@@ -72,32 +72,82 @@ def main():
     nodes={r[0]:{'position':decode_coord(r[1]),'status':r[3],'checked':r[6]} for r in con.execute('SELECT * FROM nodes')}
     all_edges={tuple(sorted((a,b))):creator for a,b,creator in con.execute('SELECT src,des,creator FROM edges') if a!=b and a in nodes and b in nodes}
     source_info={'filename':NAME+'.tif','shapeXYZ':list(volume.shape),'dtype':str(volume.dtype),'bitDepth':16,'voxelCount':int(volume.size),'uncompressedBytes':int(volume.nbytes),'fileBytes':(SOURCE/(NAME+'.tif')).stat().st_size,'md5':image_md5,'database':NAME+'.db','databaseMD5':checksum(SOURCE/(NAME+'.db')),'publishedDatabaseMD5':PUBLISHED_DB_MD5,'geometrySHA256':geometry_sha256,'publishedGeometryVerification':'Ordered node coordinates, edges with provenance, and segment geometry were checked against a SHA256 fingerprint of the published Zenodo database. Review flags are excluded from this comparison.','nodeCount':len(nodes),'undirectedEdgeCount':len(all_edges),'species':'macaque','imaging':'VISoR','coordinateUnit':'voxel','spacingCalibrated':False}
-    specs=[
-      {'id':'continuation','title':'Close the gap','prompt':'Should these two segments be connected?','context':'A saved expert connection is temporarily hidden. Inspect the fluorescent path and replay the local decision.','sourceId':2667,'targetId':2769,'referenceDecision':'accept','referenceNote':'The source SQLite database records the undirected 2667–2769 join with creator tester. It also appears in docs/axon_trace_summary.json as the first join of the longest completed trace.'},
-      {'id':'extension','title':'Extend a trajectory','prompt':'Does the candidate continue the same fiber?','context':'A second saved expert join turns a local continuation decision into another graph edge. The preceding nodes provide directional context.','sourceId':3814,'targetId':6740,'referenceDecision':'accept','referenceNote':'The source SQLite database records the undirected 3814–6740 join with creator tester. It appears in docs/axon_trace_summary.json as a later join of the longest completed trace.'},
-      {'id':'crossing','title':'Keep uncertainty explicit','prompt':'Is this nearby point the right continuation?','context':'At a crossing, proximity and one bright projection may disagree with the 3D trajectory. Rotate the volume and preserve uncertainty when the evidence is inconclusive.','sourceId':4583,'targetId':4606,'referenceDecision':None,'referenceNote':'Review example, not a ground-truth rejection. The saved DB contains 4583–4606, while docs/axon_trace_summary.json reports that its YZ tangent alignment failed and another candidate, 6850, was favored. The existing sources disagree, so no definitive reference decision is assigned.','alternativeTargetId':6850}
+    prompt = 'Should this candidate connection be accepted?'
+    context = ('Inspect the 3D fluorescence around the source endpoint and a candidate '
+               'in another segmentation fragment. Assess the continuity of the fiber.')
+    specs = [
+        {'id': 'continuation', 'title': 'Example 01', 'prompt': prompt, 'context': context,
+         'sourceId': 2667, 'targetId': 2769, 'referenceDecision': 'accept',
+         'reviewerPath': [2667, 2769],
+         'referenceNote': 'The saved reviewer graph connects fragments through the tester edge 2667–2769. It also appears in the repository trace summary. This supports fragment continuity; it is a recorded reference, not a new model inference.'},
+        {'id': 'extension', 'title': 'Example 02', 'prompt': prompt, 'context': context,
+         'sourceId': 3814, 'targetId': 3867, 'referenceDecision': 'accept',
+         'reviewerPath': [3814, 6740, 7473, 3867],
+         'referenceNote': 'The saved reviewer graph connects these original fragments by path 3814–6740–7473–3867 (tester, astar, astar). This supports same-fiber continuity. There is no original direct 3814–3867 edge; the demo connection is a fragment-level decision, not ground truth for a straight interpolated path.'},
+        {'id': 'crossing', 'title': 'Example 03', 'prompt': prompt, 'context': context,
+         'sourceId': 4583, 'targetId': 4606, 'referenceDecision': None,
+         'reviewerPath': [4583, 4606],
+         'referenceNote': 'Reference unresolved. The saved graph contains 4583–4606, while the repository trace summary reports that this candidate failed a projected tangent check and another candidate was favored. No definitive reference decision is assigned.'},
     ]
-    manifest={'schemaVersion':1,'kind':'curated-decision-replay','provenance':{'title':'NeuroFly Neuron Reconstruction Dataset','url':'https://zenodo.org/records/13328867','doi':'10.5281/zenodo.13328867','license':'CC-BY-4.0','licenseUrl':'https://creativecommons.org/licenses/by/4.0/','creatorsAsDeposited':['Anonymous, Anonymous'],'sourceCode':'https://github.com/beanli161514/neurofly','annotationGuide':'https://github.com/beanli161514/neurofly/blob/main/docs/agent_annotation.md','note':'Real image crops and saved graph geometry; interface actions demonstrate a proposed data-engine workflow. Visitor decisions are unverified demo records, not expert truth. No model inference or training runs in this page.'},'sourceVolume':source_info,'axes':{'positions':'xyz','volumeBytes':'uint8, C-order zyx, x varies fastest','spacing':[1,1,1],'unit':'voxel','note':'TIFF does not provide physical calibration; do not interpret voxel counts as micrometers.'},'tasks':[]}
+    # Reconstruct original segmentation fragments: exclude ALL reviewer joins,
+    # interpolated paths, and reviewer-added nodes from the initial task graph.
+    segmentation_edges = {edge for edge, creator in all_edges.items() if creator == 'seger'}
+    segmentation_nodes = {nid for edge in segmentation_edges for nid in edge}
+    segmentation_adj = collections.defaultdict(set)
+    for a, b in segmentation_edges:
+        segmentation_adj[a].add(b)
+        segmentation_adj[b].add(a)
+    fragment_ids = {}
+    for seed in sorted(segmentation_nodes):
+        if seed in fragment_ids:
+            continue
+        queue = [seed]
+        fragment_ids[seed] = seed
+        while queue:
+            a = queue.pop()
+            for b in segmentation_adj[a]:
+                if b not in fragment_ids:
+                    fragment_ids[b] = seed
+                    queue.append(b)
+    manifest={'schemaVersion':2,'dataRevision':2,'revision':'endpoint-fragments-32-v2','kind':'curated-decision-replay','provenance':{'title':'NeuroFly Neuron Reconstruction Dataset','url':'https://zenodo.org/records/13328867','doi':'10.5281/zenodo.13328867','license':'CC-BY-4.0','licenseUrl':'https://creativecommons.org/licenses/by/4.0/','creatorsAsDeposited':['Anonymous, Anonymous'],'sourceCode':'https://github.com/beanli161514/neurofly','annotationGuide':'https://github.com/beanli161514/neurofly/blob/main/docs/agent_annotation.md','note':'Real image crops and saved graph geometry; interface actions demonstrate the structured graph-review workflow. Visitor decisions are unverified demo records, not expert truth. No model inference or training runs in this page.'},'sourceVolume':source_info,'axes':{'positions':'xyz','volumeBytes':'uint8, C-order zyx, x varies fastest','spacing':[1,1,1],'unit':'voxel','note':'TIFF does not provide physical calibration; do not interpret voxel counts as micrometers.'},'taskDesign':{'source':'Original segmentation-fragment endpoint','candidate':'Node in another original segmentation fragment','choices':['accept','reject','uncertain'],'initialEdges':'seger only','reviewState':'simulated-pre-review-unchecked','note':'Original reviewer joins and interpolated paths are excluded. The unchecked state is a replay assumption, not the saved database review flag.'},'tasks':[]}
     for task in specs:
-        sid,tid=task['sourceId'],task['targetId'];mid=(nodes[sid]['position']+nodes[tid]['position'])/2
-        origin=np.clip(np.floor(mid-SIZE/2).astype(int),0,np.array(volume.shape)-SIZE)
+        sid, tid = task['sourceId'], task['targetId']
+        if len(segmentation_adj[sid]) != 1:
+            raise ValueError(f'{task["id"]}: source must be an original fragment endpoint')
+        if tid not in fragment_ids or fragment_ids[sid] == fragment_ids[tid]:
+            raise ValueError(f'{task["id"]}: candidate must belong to another original fragment')
+        origin = np.clip(np.floor(nodes[sid]['position']).astype(int)-SIZE//2,
+                         0, np.array(volume.shape)-SIZE)
         raw=np.asarray(volume[tuple(slice(int(x),int(x+SIZE)) for x in origin)])
         low,high=np.percentile(raw,[30,99.95]);scaled=np.rint(np.clip((raw.astype(np.float32)-low)/(high-low),0,1)*255).astype(np.uint8)
-        file=task['id']+'.u8.gz';write_gzip(HERE/file,scaled.transpose(2,1,0).tobytes())
-        inside={nid for nid,n in nodes.items() if n['status']!=0 and np.all(n['position']>=origin) and np.all(n['position']<origin+SIZE)}
-        held=tuple(sorted((sid,tid)));edges=[e for e in all_edges if e[0] in inside and e[1] in inside and e!=held]
-        adj=collections.defaultdict(list)
-        for a,b in edges:adj[a].append(b);adj[b].append(a)
-        # Components of the displayed cropped graph, after withholding the candidate.
-        components={};component_id=0
-        for seed in sorted(inside):
-            if seed in components:continue
-            queue=[seed];components[seed]=component_id
-            while queue:
-                a=queue.pop()
-                for b in adj[a]:
-                    if b not in components:components[b]=component_id;queue.append(b)
-            component_id+=1
+        file=task['id']+'-32.u8.gz';write_gzip(HERE/file,scaled.transpose(2,1,0).tobytes())
+        inside = {nid for nid in segmentation_nodes
+                  if nodes[nid]['status'] != 0
+                  and np.all(nodes[nid]['position'] >= origin)
+                  and np.all(nodes[nid]['position'] < origin+SIZE)}
+        if sid not in inside or tid not in inside:
+            raise ValueError(f'{task["id"]}: source and candidate must lie within the 32-cube')
+        held = tuple(sorted((sid, tid)))
+        edges = sorted(edge for edge in segmentation_edges if all(n in inside for n in edge))
+        adj = collections.defaultdict(list)
+        for a, b in edges:
+            adj[a].append(b)
+            adj[b].append(a)
+        if len(adj[sid]) != 1:
+            raise ValueError(f'{task["id"]}: crop must preserve endpoint history')
+        components = {nid: fragment_ids[nid] for nid in inside}
+        # Audit all saved reviewer edges whose endpoints lie geometrically in the ROI.
+        spatial_nodes = {nid for nid, node in nodes.items()
+                         if np.all(node['position'] >= origin)
+                         and np.all(node['position'] < origin+SIZE)}
+        held_reviewer_edges = [list(edge) for edge, creator in sorted(all_edges.items())
+                               if creator != 'seger' and all(n in spatial_nodes for n in edge)]
+        reference_edges = []
+        for a, b in zip(task['reviewerPath'][:-1], task['reviewerPath'][1:]):
+            creator = all_edges.get(tuple(sorted((a, b))))
+            if creator not in ('tester', 'astar'):
+                raise ValueError(f'{task["id"]}: recorded reference path is missing')
+            reference_edges.append({'sourceId': a, 'targetId': b, 'creator': creator})
         path=[sid];prev=None;cur=sid
         for _ in range(5):
             candidates=[n for n in adj[cur] if n!=prev and n not in path and all_edges[tuple(sorted((cur,n)))]=='seger']
@@ -105,7 +155,7 @@ def main():
             prev,cur=cur,candidates[0];path.append(cur)
         history=[(nodes[n]['position']-origin).tolist() for n in reversed(path)]
         vec=nodes[sid]['position']-nodes[path[-1]]['position'];norm=float(np.linalg.norm(vec));vec=vec/norm if norm else vec
-        task.update(volume=file,shape=[SIZE]*3,origin=origin.tolist(),spacing=[1,1,1],sourceVolume=source_info,compressedBytes=(HERE/file).stat().st_size,decodedBytes=int(scaled.nbytes),intensityMapping={'method':'linear-clipped-percentile','originalType':'uint16','outputType':'uint8','low':float(low),'high':float(high),'percentiles':[30,99.95],'originalCropMin':int(raw.min()),'originalCropMax':int(raw.max()),'note':'Display quantization only; no deconvolution or synthetic signal.'},nodes=[{'id':nid,'position':(nodes[nid]['position']-origin).tolist(),'component':components[nid]} for nid in sorted(inside)],edges=[list(e) for e in edges],originalEdgePresent=held in all_edges,heldOutEdges=[list(held)],replayNote='The proposed edge is withheld from the displayed graph for this replay. The source database is unchanged.',sourcePosition=(nodes[sid]['position']-origin).tolist(),targetPosition=(nodes[tid]['position']-origin).tolist(),historyNodeIds=list(reversed(path)),history=history,incomingVector=vec.tolist())
+        task.update(centerReviewStatus='unchecked',taskType='endpoint-fragment-connection',taskProvenance='curated-segmentation-fragment-replay',volume=file,shape=[SIZE]*3,origin=origin.tolist(),spacing=[1,1,1],sourceVolume=source_info,compressedBytes=(HERE/file).stat().st_size,decodedBytes=int(scaled.nbytes),intensityMapping={'method':'linear-clipped-percentile','originalType':'uint16','outputType':'uint8','low':float(low),'high':float(high),'percentiles':[30,99.95],'originalCropMin':int(raw.min()),'originalCropMax':int(raw.max()),'note':'Display quantization only; no deconvolution or synthetic signal.'},nodes=[{'id':nid,'position':(nodes[nid]['position']-origin).tolist(),'component':components[nid]} for nid in sorted(inside)],edges=[list(e) for e in edges],originalEdgePresent=held in all_edges,heldOutEdges=[list(held)],heldOutReviewerEdges=held_reviewer_edges,reviewerPathEdges=reference_edges,sourceDegree=len(segmentation_adj[sid]),sourceFragmentId=fragment_ids[sid],targetFragmentId=fragment_ids[tid],replayState={'sourceChecked':0,'sourceState':'unchecked','basis':'simulated-pre-review','savedSourceChecked':nodes[sid]['checked'],'initialGraph':'original-segmentation-fragments'},replayNote='The initial graph contains only original seger fragments. All reviewer joins and interpolated paths are withheld. The unchecked source state is simulated for this replay; the saved source database is unchanged.',sourcePosition=(nodes[sid]['position']-origin).tolist(),targetPosition=(nodes[tid]['position']-origin).tolist(),historyNodeIds=list(reversed(path)),history=history,incomingVector=vec.tolist())
         if 'alternativeTargetId' in task:task['alternativeTargetPosition']=(nodes[task['alternativeTargetId']]['position']-origin).tolist()
         manifest['tasks'].append(task)
         if args.qa:
@@ -126,6 +176,8 @@ def main():
     low,high=np.percentile(coarse,[30,99.7]);overview=np.rint(np.clip((coarse.astype(np.float32)-low)/(high-low),0,1)*255).astype(np.uint8)
     write_gzip(HERE/'overview.u8.gz',overview.transpose(2,1,0).tobytes())
     manifest['overview']={'volume':'overview.u8.gz','shape':[100,100,30],'sourceShapeXYZ':list(volume.shape),'downsampleFactor':[factor]*3,'method':'10x10x10 maximum pooling','spacing':[factor]*3,'compressedBytes':(HERE/'overview.u8.gz').stat().st_size,'intensityMapping':{'low':float(low),'high':float(high)},'note':'This is the complete public sample block at reduced resolution, not a whole brain or a terabyte dataset.'}
+    for legacy_name in ('continuation.u8.gz', 'extension.u8.gz', 'crossing.u8.gz'):
+        (HERE / legacy_name).unlink(missing_ok=True)
     (HERE/'manifest.json').write_text(json.dumps(manifest,separators=(',',':')))
     con.close()
     print(json.dumps({'source':source_info,'tasks':[{k:t[k] for k in ['id','origin','compressedBytes','sourceId','targetId','originalEdgePresent']}|{'nodes':len(t['nodes']),'edges':len(t['edges'])} for t in manifest['tasks']],'overviewBytes':manifest['overview']['compressedBytes']},indent=2))

@@ -82,3 +82,51 @@ test('invalid decisions, missing endpoints, invalid coordinates, and mismatched 
   assert.throws(() => makeReview({...task, nodes: [{id: 'a', position: [NaN, 0, 0]}, task.nodes[1]]}, 'accept', metadata), /finite coordinates/);
   assert.throws(() => graphEdgesAfterReview(task, {...makeReview(task, 'accept', metadata), taskId: 'other-task'}), /different task/);
 });
+
+test('replay reviews retain independent copies of revisions, original flags, and the initial fragment graph', () => {
+  const replayTask = {
+    ...structuredClone(task),
+    revision: 'example-2', manifestRevision: 'workflow-2', dataRevision: 2,
+    sourceDegree: 1, sourceFragmentId: 2593, targetFragmentId: 2752,
+    replayState: {
+      sourceChecked: 0, sourceState: 'unchecked', basis: 'simulated-pre-review',
+      savedSourceChecked: 1, initialGraph: 'original-segmentation-fragments',
+    },
+    initialGraph: {kind: 'original-segmentation-fragments', edgeCreators: ['seger']},
+  };
+  const before = structuredClone(replayTask);
+  const record = makeReview(replayTask, 'accept', metadata);
+  assert.equal(record.revision, replayTask.revision);
+  assert.equal(record.manifestRevision, replayTask.manifestRevision);
+  assert.equal(record.dataRevision, 2);
+  assert.deepEqual(record.replayState, replayTask.replayState);
+  assert.deepEqual(record.graphContext, {
+    nodes: replayTask.nodes, edges: replayTask.edges, initialGraph: replayTask.initialGraph,
+    sourceDegree: 1, sourceFragmentId: 2593, targetFragmentId: 2752,
+  });
+  const exported = createExport([record]);
+  assert.match(exported.purpose, /source dataset is unchanged/);
+  assert.equal(exported.supervisedCandidates[0].validation, 'unverified-demo-review');
+  exported.reviews[0].replayState.savedSourceChecked = 0;
+  exported.reviews[0].graphContext.nodes[0].position[0] = 999;
+  assert.equal(record.replayState.savedSourceChecked, 1);
+  assert.equal(record.graphContext.nodes[0].position[0], 10);
+  record.replayState.sourceChecked = 1;
+  record.graphContext.nodes[0].position[0] = 999;
+  record.graphContext.edges[0][0] = 'changed';
+  record.graphContext.initialGraph.edgeCreators[0] = 'changed';
+  assert.deepEqual(replayTask, before);
+  delete replayTask.initialGraph;
+  assert.equal(makeReview(replayTask, 'uncertain', metadata).graphContext.initialGraph, 'original-segmentation-fragments');
+});
+
+test('old reviews cannot silently apply to a new candidate or data revision under the same task ID', () => {
+  const oldReview = makeReview(task, 'accept', metadata);
+  assert.throws(() => graphEdgesAfterReview({...task, targetId: 'c'}, oldReview), /different candidate connection/);
+  assert.throws(() => graphEdgesAfterReview({...task, dataRevision: 2}, oldReview), /different dataRevision/);
+  const currentTask = {...task, dataRevision: 2};
+  const currentReview = makeReview(currentTask, 'accept', metadata);
+  assert.equal(graphEdgesAfterReview(currentTask, currentReview).length, task.edges.length + 1);
+  assert.throws(() => graphEdgesAfterReview({...currentTask, dataRevision: 3}, currentReview), /different dataRevision/);
+  assert.deepEqual(graphEdgesAfterReview(currentTask, makeReview(currentTask, 'uncertain', metadata)), currentTask.edges);
+});

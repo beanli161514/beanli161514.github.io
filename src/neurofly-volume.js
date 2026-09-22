@@ -57,6 +57,7 @@ void main() {
 
 function disposeGroup(group) {
   group.traverse(object=>{
+    if(object.isInstancedMesh)object.dispose();
     object.geometry?.dispose();
     if(Array.isArray(object.material)) object.material.forEach(m=>m.dispose());
     else object.material?.dispose();
@@ -81,7 +82,18 @@ export class VolumeView {
     this.controls.addEventListener('start',()=>{this.interacting=true;this.resize();});
     this.controls.addEventListener('end',()=>{this.interacting=false;this.resize();});
     this.volumeScene=new THREE.Scene();
+    // Keep annotation geometry at display resolution while ray casting into a
+    // smaller texture. Orbiting may reduce volume sampling, never node quality.
+    this.volumeTarget=new THREE.WebGLRenderTarget(1,1,{depthBuffer:false,stencilBuffer:false});
+    this.screenScene=new THREE.Scene();
+    this.screenScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),new THREE.ShaderMaterial({
+      vertexShader,fragmentShader:'uniform sampler2D image; varying vec2 vUv; void main(){gl_FragColor=texture2D(image,vUv);}',
+      uniforms:{image:{value:this.volumeTarget.texture}},depthWrite:false,depthTest:false,
+    })));
     this.graphScene=new THREE.Scene();
+    this.graphScene.add(new THREE.HemisphereLight(0xffffff,0x516475,1.25));
+    this.keyLight=new THREE.DirectionalLight(0xffffff,1.5);this.graphScene.add(this.keyLight);
+    this.graphScene.add(this.keyLight.target);
     this.annotations=new THREE.Group();
     this.graphScene.add(this.annotations);
     this.clipDirection={value:new THREE.Vector3(0,0,-1)};
@@ -120,51 +132,49 @@ export class VolumeView {
   makeLine(positions,color,width=1,opacity=1,dashed=false) {
     if(!positions.length)return;
     const geometry=new LineSegmentsGeometry();geometry.setPositions(positions);
-    const material=new LineMaterial({color,linewidth:width,transparent:opacity<1,opacity,depthTest:false,depthWrite:false,dashed,dashSize:2,gapSize:1.2,clippingPlanes:this.clipPlanes});
+    const material=new LineMaterial({color,linewidth:width,transparent:opacity<1,opacity,depthTest:true,depthWrite:true,dashed,dashSize:.55,gapSize:.35,clippingPlanes:this.clipPlanes});
     material.resolution.set(this.container.clientWidth,this.container.clientHeight);
     this.lineMaterials.push(material);
     const object=new LineSegments2(geometry,material);object.computeLineDistances();object.frustumCulled=false;
     this.annotations.add(object);return object;
   }
 
-  makePoints(positions,color,size) {
+  makePoints(positions,color,radius) {
     if(!positions.length)return;
-    const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    const material=new THREE.ShaderMaterial({
-      uniforms:{color:{value:new THREE.Color(color)},size:{value:size},clipDirection:this.clipDirection,clipFocus:this.clipFocus,clipHalf:this.clipHalf},
-      vertexShader:'uniform float size; varying vec3 worldPosition; void main(){worldPosition=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);gl_PointSize=size;}',
-      fragmentShader:'uniform vec3 color; uniform vec3 clipDirection; uniform vec3 clipFocus; uniform float clipHalf; varying vec3 worldPosition; void main(){if(abs(dot(worldPosition-clipFocus,clipDirection))>clipHalf)discard;float r=length(gl_PointCoord-0.5);if(r>0.5)discard;gl_FragColor=vec4(mix(vec3(0.025,0.045,0.06),color,1.0-smoothstep(0.31,0.49,r)),1.0);}',
-      depthTest:false,depthWrite:false,
-    });
-    const object=new THREE.Points(geometry,material);object.frustumCulled=false;this.annotations.add(object);return object;
+    const geometry=new THREE.SphereGeometry(radius,24,16);
+    const material=new THREE.MeshPhongMaterial({color,specular:0x777777,shininess:35,
+      clippingPlanes:this.clipPlanes,depthTest:true,depthWrite:true});
+    const object=new THREE.InstancedMesh(geometry,material,positions.length/3),matrix=new THREE.Matrix4();
+    for(let i=0;i<positions.length;i+=3)object.setMatrixAt(i/3,matrix.makeTranslation(positions[i],positions[i+1],positions[i+2]));
+    object.instanceMatrix.needsUpdate=true;object.frustumCulled=false;
+    this.annotations.add(object);return object;
   }
 
   setGraph(record) {
     disposeGroup(this.annotations);this.lineMaterials=[];
     if(!this.task)return;
-    const t=this.task, nodes=new Map(t.nodes.map(n=>[n.id,n.position]));
+    const t=this.task, nodes=new Map(t.nodes.map(n=>[n.id,n.position])),nodeInfo=new Map(t.nodes.map(n=>[n.id,n]));
     const isProposal=(a,b)=>(a===t.sourceId&&b===t.targetId)||(b===t.sourceId&&a===t.targetId);
     // The proposed join is drawn separately, including its accepted/rejected state.
-    const context=t.edges.filter(([a,b])=>!isProposal(a,b)).flatMap(([a,b])=>nodes.has(a)&&nodes.has(b)?[...nodes.get(a),...nodes.get(b)]:[]);
-    this.makeLine(context,'#66a3b2',1.35,.55);
-    this.makePoints(t.nodes.filter(n=>n.id!==t.sourceId&&n.id!==t.targetId).flatMap(n=>n.position),'#99c9d5',5);
-    if(t.history?.length>1){
-      this.makeLine(t.history.slice(1).flatMap((p,i)=>[...t.history[i],...p]),'#56dbe7',2.7);
-      this.makePoints(t.history.flat(),'#56dbe7',7);
+    const sourceComponent=nodeInfo.get(t.sourceId).component,targetComponent=nodeInfo.get(t.targetId).component;
+    const colorFor=component=>component===sourceComponent?'#29c4df':component===targetComponent?'#efbb55':'#92a7c3';
+    for(const component of new Set(t.nodes.map(n=>n.component))){
+      const context=t.edges.filter(([a,b])=>!isProposal(a,b)&&nodeInfo.get(a)?.component===component)
+        .flatMap(([a,b])=>nodes.has(a)&&nodes.has(b)?[...nodes.get(a),...nodes.get(b)]:[]);
+      this.makeLine(context,colorFor(component),1.8);
+      this.makePoints(t.nodes.filter(n=>n.component===component&&n.id!==t.sourceId&&n.id!==t.targetId).flatMap(n=>n.position),colorFor(component),.36);
     }
     const a=new THREE.Vector3(...nodes.get(t.sourceId)),b=new THREE.Vector3(...nodes.get(t.targetId));
-    const color=record?.decision==='accept'?'#63edbc':record?.decision==='reject'?'#f38e8d':record?.decision==='uncertain'?'#bba7f3':'#ffc875';
-    this.makeLine([...a,...b],color,record?.decision==='accept'?3.2:2.4,1,record?.decision!=='accept');
+    const color=record?.decision==='accept'?'#50e7a1':record?.decision==='reject'?'#f48f96':record?.decision==='uncertain'?'#c0a3f6':'#f4f6fa';
+    this.makeLine([...a,...b],color,2.2,1,record?.decision!=='accept');
     const direction=b.clone().sub(a),length=direction.length();
     if(length>0){
-      const arrow=new THREE.ArrowHelper(direction.normalize(),b.clone().addScaledVector(direction,-Math.min(4,length*.25)),Math.min(4,length*.25),color,Math.min(3,length*.22),Math.min(2,length*.15));
-      arrow.line.visible=false;arrow.cone.material.depthTest=false;arrow.cone.material.clippingPlanes=this.clipPlanes;this.annotations.add(arrow);
+      direction.normalize();
+      const tip=b.clone().addScaledVector(direction,-.65),head=Math.min(.7,length*.2);
+      const arrow=new THREE.ArrowHelper(direction,tip.clone().addScaledVector(direction,-head),head,color,head,head*.7);
+      arrow.line.visible=false;arrow.cone.material.clippingPlanes=this.clipPlanes;this.annotations.add(arrow);
     }
-    this.makePoints([...a],'#56dbe7',15);this.makePoints([...b],color,15);
-    if(record?.decision==='reject'){
-      const middle=a.clone().lerp(b,.5),r=1.6;
-      this.makeLine([middle.x-r,middle.y-r,middle.z,middle.x+r,middle.y+r,middle.z,middle.x-r,middle.y+r,middle.z,middle.x+r,middle.y-r,middle.z],color,2);
-    }
+    this.makePoints([...a],'#29c4df',.53);this.makePoints([...b],'#efbb55',.53);
     this.render();
   }
 
@@ -191,16 +201,15 @@ export class VolumeView {
 
   resize() {
     const w=this.container.clientWidth,h=this.container.clientHeight;if(!w||!h)return;
-    // Cap the ray-casting buffer, independent of Retina DPR, and reduce it while
-    // dragging. Static views return to full quality; nothing runs when idle.
-    const ratio=Math.min(1,1000/w)*(this.interacting?.68:1);
-    this.renderer.setPixelRatio(ratio);this.renderer.setSize(w,h,false);
+    const volumeRatio=Math.min(1,1000/w)*(this.interacting?.75:1);
+    this.volumeTarget.setSize(Math.max(1,Math.round(w*volumeRatio)),Math.max(1,Math.round(h*volumeRatio)));
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio,2));this.renderer.setSize(w,h,false);
     const extent=this.task?Math.max(...this.task.shape)*.66:64;
     this.camera.left=-extent*w/h;this.camera.right=extent*w/h;
     this.camera.top=extent;this.camera.bottom=-extent;
     this.camera.updateProjectionMatrix();
     this.lineMaterials.forEach(m=>m.resolution.set(w,h));
-    this.material.uniforms.uStep.value=this.interacting?1.25:.6;
+    this.material.uniforms.uStep.value=this.interacting?.7:.35;
     this.render();
   }
 
@@ -215,8 +224,13 @@ export class VolumeView {
     this.clipPlanes[1].set(direction.clone().negate(),direction.dot(center)+half);
     this.material.uniforms.uInverseProjection.value.copy(this.camera.projectionMatrixInverse);
     this.material.uniforms.uCameraWorld.value.copy(this.camera.matrixWorld);
+    this.keyLight.position.copy(this.camera.position).add(new THREE.Vector3(-20,30,10));
+    this.keyLight.target.position.copy(this.controls.target);
+    this.renderer.setRenderTarget(this.volumeTarget);
     this.renderer.clear();
     this.renderer.render(this.volumeScene,this.quadCamera);
+    this.renderer.setRenderTarget(null);this.renderer.clear();
+    this.renderer.render(this.screenScene,this.quadCamera);
     this.renderer.clearDepth();this.renderer.render(this.graphScene,this.camera);
     [this.task.sourceId,this.task.targetId].forEach((id,i)=>{
       const world=new THREE.Vector3(...this.task.nodes.find(n=>n.id===id).position),p=world.clone().project(this.camera);

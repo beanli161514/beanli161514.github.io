@@ -2,6 +2,7 @@
 """Verify NeuroFly volume orientation, quantization, provenance and graph replay."""
 import argparse
 import ast
+import collections
 import gzip
 import json
 from pathlib import Path
@@ -30,7 +31,38 @@ def main():
     source = tifffile.memmap(image_path, mode='r')
     db = sqlite3.connect((source_dir / (NAME + '.db')).as_uri() + '?mode=ro', uri=True)
     assert geometry_checksum(db) == PUBLISHED_GEOMETRY_SHA256, 'Graph differs from published reference'
+    assert manifest['schemaVersion'] == 2 and manifest['dataRevision'] == 2
+    assert manifest['revision'] == 'endpoint-fragments-32-v2'
+    adjacency = collections.defaultdict(set)
+    for a, b in db.execute('SELECT src,des FROM edges WHERE creator="seger"'):
+        if a != b:
+            adjacency[a].add(b)
+            adjacency[b].add(a)
+    fragments = {}
+    for seed in sorted(adjacency):
+        if seed in fragments:
+            continue
+        queue = [seed]
+        fragments[seed] = seed
+        while queue:
+            a = queue.pop()
+            for b in adjacency[a]:
+                if b not in fragments:
+                    fragments[b] = seed
+                    queue.append(b)
     for task in manifest['tasks']:
+        assert task['shape'] == [32, 32, 32]
+        assert task['volume'] == task['id'] + '-32.u8.gz'
+        assert task['prompt'] == 'Should this candidate connection be accepted?'
+        sid, tid = task['sourceId'], task['targetId']
+        assert len(adjacency[sid]) == task['sourceDegree'] == 1
+        assert fragments[sid] == task['sourceFragmentId']
+        assert fragments[tid] == task['targetFragmentId']
+        assert fragments[sid] != fragments[tid]
+        assert task['replayState']['sourceChecked'] == 0
+        assert task['centerReviewStatus'] == 'unchecked'
+        assert task['taskType'] == 'endpoint-fragment-connection'
+        assert task['replayState']['basis'] == 'simulated-pre-review'
         size, origin = task['shape'], np.array(task['origin'])
         payload_path = root / task['volume']
         payload = gzip.decompress(payload_path.read_bytes())
@@ -46,13 +78,32 @@ def main():
         assert all(a in nodes and b in nodes for a, b in task['edges'])
         held = sorted([task['sourceId'], task['targetId']])
         assert held not in task['edges'], 'Proposed edge must be withheld'
-        assert db.execute('SELECT 1 FROM edges WHERE src=? AND des=?',
-                          (task['sourceId'], task['targetId'])).fetchone()
+        original_edge = db.execute('SELECT 1 FROM edges WHERE src=? AND des=?',
+                                   (sid, tid)).fetchone()
+        assert bool(original_edge) == task['originalEdgePresent']
+        for a, b in task['edges']:
+            assert b in adjacency[a], 'Initial graph must contain only seger edges'
+        assert sum(sid in edge for edge in task['edges']) == 1
+        assert sid in nodes and tid in nodes
+        assert nodes[sid]['component'] != nodes[tid]['component']
+        for edge in task['reviewerPathEdges']:
+            actual = db.execute('SELECT creator FROM edges WHERE src=? AND des=?',
+                                (edge['sourceId'], edge['targetId'])).fetchone()
+            assert actual and actual[0] == edge['creator']
+        assert task['reviewerPath'][0] == sid and task['reviewerPath'][-1] == tid
+        for a, b in task['heldOutReviewerEdges']:
+            actual = db.execute('SELECT creator FROM edges WHERE src=? AND des=?', (a, b)).fetchone()
+            assert actual and actual[0] != 'seger'
+            assert [a, b] not in task['edges']
+        np.testing.assert_array_equal(nodes[sid]['position'], [16, 16, 16])
         for nid, node in nodes.items():
             value = db.execute('SELECT coord FROM nodes WHERE nid=?', (nid,)).fetchone()[0]
             coordinate = ast.literal_eval(value.decode() if isinstance(value, bytes) else value)
             np.testing.assert_array_equal(np.array(node['position']) + origin, coordinate)
-        print(f"{task['id']}: voxels, xyz orientation, {len(nodes)} node positions and held-out edge verified")
+            assert np.all(np.array(node['position']) >= 0) and np.all(np.array(node['position']) < 32)
+            assert node['component'] == fragments[nid]
+        np.testing.assert_array_equal(origin, np.floor(np.array(nodes[sid]['position'])+origin).astype(int)-16)
+        print(f"{task['id']}: voxels, xyz orientation, {len(nodes)} node positions, terminal source and distinct fragments verified")
     assert next(t for t in manifest['tasks'] if t['id'] == 'crossing')['referenceDecision'] is None
     overview = manifest['overview']
     shape = overview['shape']
