@@ -51,7 +51,8 @@ function draw(time){
   document.documentElement.dataset.frame=String(trial.start+frame);
 }
 function pause(){video.pause();$('play').innerHTML='▶ <span>Play</span>';$('play').setAttribute('aria-label','Play trial');}
-async function play(){if(!ready)return;if(video.ended||frame>=trial.frames-1)video.currentTime=0;try{await video.play();$('play').innerHTML='Ⅱ <span>Pause</span>';$('play').setAttribute('aria-label','Pause trial');}catch(e){$('trial-caption').textContent='Playback could not start. Try pressing Play again.';}}
+function setPlaybackStatus(message=''){const status=$('trial-caption');status.textContent=message;status.hidden=!message;}
+async function play(){if(!ready)return;if(video.ended||frame>=trial.frames-1)video.currentTime=0;setPlaybackStatus();try{await video.play();$('play').innerHTML='Ⅱ <span>Pause</span>';$('play').setAttribute('aria-label','Pause trial');}catch(e){setPlaybackStatus('Playback could not start. Try pressing Play again.');}}
 $('play').onclick=()=>video.paused?play():pause();
 $('speed').onchange=()=>video.playbackRate=Number($('speed').value);
 $('timeline').addEventListener('input',()=>{pause();video.currentTime=(Number($('timeline').value)+.1)/manifest.fps;});
@@ -75,7 +76,7 @@ async function getTrack(trial){
   return trackCache.get(trial.id);
 }
 async function selectTrial(selected){
-  const version=++loadVersion;pause();ready=false;track=null;trial=selected;frame=0;
+  const version=++loadVersion;pause();setPlaybackStatus();ready=false;track=null;trial=selected;frame=0;
   $('loading').hidden=false;$('loading').textContent=`Loading ${selected.label.toLowerCase()}…`;
   $('play').disabled=true;$('timeline').disabled=true;$('timeline').max=selected.frames-1;$('timeline').value=0;
   $('time').textContent='0.00 s';$('frame-label').textContent=`Frame ${selected.start}`;$('duration').textContent=`${(selected.frames/manifest.fps).toFixed(2)} s`;
@@ -92,7 +93,6 @@ async function selectTrial(selected){
     const [data]=await Promise.all([getTrack(selected),videoReady]);
     if(version!==loadVersion)return;
     track=data;ready=true;draw(0);fitView();$('loading').hidden=true;$('play').disabled=false;$('timeline').disabled=false;
-    $('trial-caption').textContent=`${selected.label} · Source frames ${selected.start.toLocaleString()}–${(selected.end-1).toLocaleString()} · ${(selected.start/manifest.fps).toFixed(2)}–${(selected.end/manifest.fps).toFixed(2)} s in the recording. Missing face landmarks are interpolated in 3D.`;
   }catch(e){if(version===loadVersion){$('loading').textContent='This trial could not load. Choose a trial to retry.';console.error(e);}}
 }
 for(const selected of manifest.trials){const b=document.createElement('button');b.innerHTML=`${selected.label}<small>${(selected.start/manifest.fps).toFixed(2)}–${(selected.end/manifest.fps).toFixed(2)} s</small>`;b.onclick=()=>selectTrial(selected);$('trials').append(b);}
@@ -101,12 +101,20 @@ selectTrial(manifest.trials[0]);
 async function initShape(){
   const {models}=await(await fetchOK('shape-model.json')).json();
   const view=new View3D($('shape-scene'),{up:[0,0,1]}),meanLine=view.line('#8b969d',1.6,.65),shapeLine=view.line(manifest.ears[0].color,3.5);
-  let ear='left';const values={left:new Float32Array(models.left.modes.length),right:new Float32Array(models.right.modes.length)};
+  let ear='left',showAllModes=false;const values={left:new Float32Array(models.left.modes.length),right:new Float32Array(models.right.modes.length)};
+  const defaultModeCount=6;
   function update(){
     view.setCurve(meanLine,models[ear].mean);meanLine.visible=$('mean-toggle').checked;
     view.setCurve(shapeLine,shapeFromCoefficients(models[ear],values[ear]));shapeLine.material.color.set(manifest.ears.find(e=>e.name===ear).color);view.render();
   }
   function resetView(){view.fit(models[ear].mean,models[ear].viewDirection,1.15);}
+  function updateModeVisibility(){
+    [...$('coefficients').children].forEach((row,index)=>{row.hidden=!showAllModes&&index>=defaultModeCount;});
+    const toggle=$('toggle-pcs'),count=models[ear].modes.length;
+    toggle.hidden=count<=defaultModeCount;
+    toggle.textContent=showAllModes?`Show first ${defaultModeCount}`:`Show all ${count}`;
+    toggle.setAttribute('aria-expanded',String(showAllModes));
+  }
   function buildSliders(){
     $('coefficients').replaceChildren();
     models[ear].modes.forEach((_mode,i)=>{
@@ -114,14 +122,15 @@ async function initShape(){
       row.innerHTML=`<label for="pc-${i}"><span>PC ${i+1}<small>${(models[ear].variance[i]*100).toFixed(1)}%</small></span><output for="pc-${i}">${values[ear][i].toFixed(2)}σ</output></label><input id="pc-${i}" aria-label="${ear} ear principal component ${i+1}" type="range" min="-3" max="3" step="0.05" value="${values[ear][i]}">`;
       row.querySelector('input').oninput=e=>{values[ear][i]=Number(e.target.value);row.querySelector('output').textContent=`${values[ear][i].toFixed(2)}σ`;update();};$('coefficients').append(row);
     });
-    update();resetView();
+    updateModeVisibility();update();resetView();
   }
   for(const side of ['left','right'])$('ear-'+side).onclick=()=>{ear=side;for(const s of ['left','right']){$('ear-'+s).classList.toggle('active',s===side);$('ear-'+s).setAttribute('aria-pressed',String(s===side));}buildSliders();};
   $('reset-pcs').onclick=()=>{values.left.fill(0);values.right.fill(0);buildSliders();};
+  $('toggle-pcs').onclick=()=>{showAllModes=!showAllModes;updateModeVisibility();};
   $('mean-toggle').onchange=update;$('shape-view-reset').onclick=resetView;
   buildSliders();
 }
-initShape().catch(error=>{$('coefficients').textContent='The shape viewer could not load. Check WebGL support and reload to retry.';console.error(error);});
+initShape().catch(error=>{$('toggle-pcs').hidden=true;$('coefficients').textContent='The shape viewer could not load. Check WebGL support and reload to retry.';console.error(error);});
 
 }
 boot().catch(error=>{const el=document.getElementById("loading");el.hidden=false;el.textContent="The demo could not load. Please reload to retry.";console.error(error);});

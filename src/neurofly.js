@@ -86,7 +86,7 @@ async function boot(){
       overview.setRegion(task.origin.map((n,i)=>n/factor[i]),task.shape.map((n,i)=>n/factor[i]));
     }
     const extentMM=manifest.sourceVolume.shapeXYZ.map((n,i)=>n*manifest.sourceVolume.voxelSizeUM[i]/1000);
-    $('scale-caption').textContent=`${extentMM.join(' × ')} mm · fluorescence image at 1 µm per voxel. Gold box: the current 32 µm task cube.`;
+    $('scale-caption').textContent=`${extentMM.join(' × ')} mm · 1 µm/voxel\nPreview: 10 µm/voxel. Yellow box: a 32 µm task window.`;
   }
 
   function renderChoices(task){
@@ -114,15 +114,6 @@ async function boot(){
       button.append(text,key);button.onclick=()=>review(choice.decision,choice.candidateId);
       $('decision-actions').append(button);
     });
-    const legend=$('candidate-legend');
-    if(legend){
-      legend.replaceChildren();
-      task.candidates.forEach((candidate,i)=>{
-        const item=document.createElement('span'),dot=document.createElement('i');
-        dot.style.background=CANDIDATE_COLORS[i%CANDIDATE_COLORS.length];
-        item.append(dot,document.createTextNode(`${candidate.label} · ${candidate.kind==='image-point'?'proposed point':'fragment endpoint'}`));legend.append(item);
-      });
-    }
   }
 
   function updateReview(){
@@ -132,7 +123,7 @@ async function boot(){
     $('next-task').textContent=index===tasks.length-1?'First task':'Next task';
     $('undo-decision').disabled=undo.length===0;
     $('reset-session').disabled=summary.total===0;
-    for(const id of ['view-xy','view-xz','view-yz','view-reset','contrast','depth','annotations-toggle'])$(id).disabled=!ready;
+    for(const id of ['view-xy','view-xz','view-yz','view-reset'])$(id).disabled=!ready;
     for(const button of $('decision-actions').children){
       const selected=record?.decision===button.dataset.decision&&(!button.dataset.candidateId||record.selectedCandidateId===button.dataset.candidateId);
       button.disabled=!ready;button.setAttribute('aria-pressed',String(Boolean(selected)));button.classList.toggle('selected',Boolean(selected));
@@ -159,11 +150,10 @@ async function boot(){
     $('task-context').textContent=task.context;
     $('task-source').textContent=`${task.sourceVolume.imaging} · 1 µm/voxel`;
     $('task-size').textContent=`${task.shape.map((n,i)=>n*task.sourceVolume.voxelSizeUM[i]).join(' × ')} µm`;
-    $('contrast').value=1;$('depth').value=1;
     renderChoices(task);updateReview();setRegion(task);
     try{
       const data=await loadVolume(task);if(currentVersion!==version)return;
-      view.setData(task,data);view.setScaleBar(10/task.sourceVolume.voxelSizeUM[0],'10 µm');view.setContrast(1);view.setDepth(1);view.setAnnotations($('annotations-toggle').checked);
+      view.setData(task,data);view.setScaleBar(10/task.sourceVolume.voxelSizeUM[0],'10 µm');view.setContrast(1);view.setDepth(1);view.setAnnotations(true);
       ready=true;$('volume-status').hidden=true;setActiveView('oblique');updateReview();
     }catch(error){if(currentVersion===version){$('volume-status').textContent='This volume could not load. Select the task again to retry.';console.error(error);}}
   }
@@ -185,9 +175,6 @@ async function boot(){
   function setActiveView(mode){for(const axis of ['xy','xz','yz'])$(`view-${axis}`).setAttribute('aria-pressed',String(mode===axis));}
   for(const axis of ['xy','xz','yz'])$(`view-${axis}`).onclick=()=>{view.setView(axis);setActiveView(axis);};
   $('view-reset').onclick=()=>{view.setView('oblique');setActiveView('oblique');};
-  $('contrast').oninput=e=>view.setContrast(Number(e.target.value));
-  $('depth').oninput=e=>view.setDepth(Number(e.target.value));
-  $('annotations-toggle').onchange=e=>view.setAnnotations(e.target.checked);
   window.addEventListener('keydown',event=>{
     if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||['INPUT','SELECT','TEXTAREA'].includes(event.target.tagName)||event.target.closest('#training'))return;
     const choice=choicesFor(tasks[index])[Number(event.key)-1];
@@ -226,7 +213,7 @@ async function boot(){
         return {...neuron,segments:neuron.edges.flatMap(([a,b])=>[...positions[a],...positions[b]])};
       });
       brain.setTraces(traces);
-    }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · fluorescence microscopy. Neuron annotations could not load.';console.error(error);}
+    }catch(error){$('brain-caption').textContent='12 × 8 × 13.2 mm · 1 µm/voxel\nPreview: 64 µm/voxel. Neuron annotations could not load.';console.error(error);}
     brain.enableAutoRotation();
   }
   initOverview().catch(error=>{$('scale-overview').textContent='Overview unavailable; local tasks remain interactive.';console.error(error);});
