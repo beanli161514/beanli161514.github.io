@@ -1,0 +1,1 @@
+import"./site-DEEGMWxb.js";const e=new Set(["#experiment","#experiment-title","#shape","#shape-title","#method-title"]);e.has(window.location.hash)&&window.location.replace(`/ear/${window.location.search}${window.location.hash}`);
